@@ -53,6 +53,7 @@ namespace Assets.Scripts
         private static WebCamTextureAccess WebCamTextureAccess => WebCamTextureAccess.Instance;
 
         private static SettingsProvider SettingsProvider => SettingsProvider.Instance;
+        private WebCamTexture obsCam;
 
         private void Start()
         {
@@ -72,7 +73,8 @@ namespace Assets.Scripts
             this.worker = WorkerFactory.CreateWorker(BackendType.GPUCompute, model);
 
             // Initialize model input
-            WebCamTextureAccess.Play();
+            obsCam = new WebCamTexture("OBS Virtual Camera", 640, 640);
+            obsCam.Play();
             this.intermediateRenderTexture = new RenderTexture(Parameters.ModelImageResolution.x, Parameters.ModelImageResolution.y, 24);
             this.ShaderForScaling.SetFloat("_Aspect",
                 (float)WebCamTextureAccess.ActualCameraSize.x / WebCamTextureAccess.ActualCameraSize.y * Parameters.ModelImageResolution.y / Parameters.ModelImageResolution.x);
@@ -89,7 +91,7 @@ namespace Assets.Scripts
                     this.inputTensor?.Dispose();
                     this.cameraTransform = new CameraTransform(Camera.main);
 
-                    Graphics.Blit(WebCamTextureAccess.WebCamTexture, this.intermediateRenderTexture, this.ShaderForScaling);
+                    Graphics.Blit(obsCam, intermediateRenderTexture, ShaderForScaling);
                     this.inputTensor = TextureConverter.ToTensor(this.intermediateRenderTexture, this.textureTransform);
 
                     this.modelState = ModelState.Executing;
