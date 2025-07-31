@@ -21,11 +21,15 @@ public class ScreenshotController : MonoBehaviour
             }
             UnityEngine.Windows.WebCam.PhotoCapture.CreateAsync(false, OnPhotoCaptureCreated);
         }
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            PrintFilePath();
+        }
     }
     void OnPhotoCaptureCreated(UnityEngine.Windows.WebCam.PhotoCapture captureObject)
     {
         Debug.Log("OnPhotoCaptureCreated called");
-        
+
         if (captureObject == null)
         {
             Debug.LogError("PhotoCapture object is null!");
@@ -90,5 +94,12 @@ public class ScreenshotController : MonoBehaviour
         {
             Debug.Log("Failed to save Photo to disk");
         }
+    }
+    private void PrintFilePath()
+    {
+        // Debug.Log($"Photo saved to: {System.IO.Path.Combine(Application.persistentDataPath, $"CapturedImage{Time.time}_n.jpg")}");
+        string filename = string.Format(@"CapturedImage{0}_n.jpg", Time.time);
+        string filePath = System.IO.Path.Combine(Application.persistentDataPath, filename);
+        Debug.Log($"Saving to: {filePath}");
     }
 }
