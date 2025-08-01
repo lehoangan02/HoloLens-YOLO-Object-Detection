@@ -11,7 +11,7 @@ public class ScreenshotController : MonoBehaviour
     }
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.X))
         {
             Debug.Log("Starting Photo Capture...");
             if (photoCaptureObject != null)
@@ -101,5 +101,10 @@ public class ScreenshotController : MonoBehaviour
         string filename = string.Format(@"CapturedImage{0}_n.jpg", Time.time);
         string filePath = System.IO.Path.Combine(Application.persistentDataPath, filename);
         Debug.Log($"Saving to: {filePath}");
+    }
+    public void TakeScreenShot()
+    {
+        Debug.Log("TakeScreenShot called");
+        UnityEngine.Windows.WebCam.PhotoCapture.CreateAsync(false, OnPhotoCaptureCreated);
     }
 }
