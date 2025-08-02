@@ -1,0 +1,4 @@
+C:\Users\fit\Documents\UDP\UDPChat\obj\Debug\net9.0\UDPChat.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\fit\Documents\UDP\UDPChat\obj\Debug\net9.0\UDPChat.AssemblyInfoInputs.cache
+C:\Users\fit\Documents\UDP\UDPChat\obj\Debug\net9.0\UDPChat.AssemblyInfo.cs
+C:\Users\fit\Documents\UDP\UDPChat\obj\Debug\net9.0\UDPChat.csproj.CoreCompileInputs.cache
