@@ -2,10 +2,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using UnityEngine.UIElements;
 
 public class ScreenshotController : MonoBehaviour
 {
     private UnityEngine.Windows.WebCam.PhotoCapture photoCaptureObject = null;
+    public Screamer screamer;
     void Start()
     {
     }
@@ -29,6 +31,7 @@ public class ScreenshotController : MonoBehaviour
     void OnPhotoCaptureCreated(UnityEngine.Windows.WebCam.PhotoCapture captureObject)
     {
         Debug.Log("OnPhotoCaptureCreated called");
+        // screamer.ScreamToDialog("Photo capture creaeted!");
 
         if (captureObject == null)
         {
@@ -73,6 +76,8 @@ public class ScreenshotController : MonoBehaviour
             string filePath = System.IO.Path.Combine(Application.persistentDataPath, filename);
             Debug.Log($"Saving to: {filePath}");
 
+            var message = "Saving to: " + filePath;
+            screamer.ScreamToDialog(message);
 
             photoCaptureObject.TakePhotoAsync(filePath, UnityEngine.Windows.WebCam.PhotoCaptureFileOutputFormat.JPG, OnCapturedPhotoToDisk);
         }
@@ -104,7 +109,8 @@ public class ScreenshotController : MonoBehaviour
     }
     public void TakeScreenShot()
     {
-        Debug.Log("TakeScreenShot called");
+        screamer.Scream("Called Take Screenshot");
+        // screamer.ScreamToDialog("SCREENSHOT TRIED!");
         UnityEngine.Windows.WebCam.PhotoCapture.CreateAsync(false, OnPhotoCaptureCreated);
     }
 }
