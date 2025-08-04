@@ -19,7 +19,7 @@ public class CurrentFrameCapturer : MonoBehaviour
 
     private void Start()
     {
-        targetIP = "10.0.10.203";
+        targetIP = "192.168.1.7";
         targetPort = 5010;
         // Initialize UDP client and endpoint
         udpClient = new UdpClient();
@@ -46,34 +46,23 @@ public class CurrentFrameCapturer : MonoBehaviour
 
     private void SendCurrentFrame()
     {
-        // Get the current frame as pixel data
-        Color32[] pixels = WebCamTextureAccess.Instance.WebCamTexture.GetPixels32();
-        byte[] byteArray = new byte[pixels.Length * 4];
+        // grab dimensions
+        int w = WebCamTextureAccess.Instance.WebCamTexture.width;
+        int h = WebCamTextureAccess.Instance.WebCamTexture.height;
 
-        // Manually copy the data from Color32[] to byte[]
-        for (int i = 0; i < pixels.Length; i++)
-        {
-            byteArray[i * 4] = pixels[i].r; // Red channel
-            byteArray[i * 4 + 1] = pixels[i].g; // Green channel
-            byteArray[i * 4 + 2] = pixels[i].b; // Blue channel
-            byteArray[i * 4 + 3] = pixels[i].a; // Alpha channel
-        }
+        // copy pixels into a Texture2D
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        tex.SetPixels32(WebCamTextureAccess.Instance.WebCamTexture.GetPixels32());
+        tex.Apply();
 
-        // Split the data into smaller chunks
-        int maxChunkSize = 65000; // Safe size for UDP packets
-        int totalChunks = Mathf.CeilToInt((float)byteArray.Length / maxChunkSize);
+        // encode to JPEG (quality = 50)
+        byte[] jpg = tex.EncodeToJPG(50);
 
-        for (int chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++)
-        {
-            int offset = chunkIndex * maxChunkSize;
-            int chunkSize = Mathf.Min(maxChunkSize, byteArray.Length - offset);
+        // send in one go (or chunk if > max UDP size)
+        udpClient.Send(jpg, jpg.Length, endPoint);
 
-            byte[] chunk = new byte[chunkSize];
-            Array.Copy(byteArray, offset, chunk, 0, chunkSize);
-
-            // Send the chunk via UDP
-            udpClient.Send(chunk, chunk.Length, endPoint);
-        }
+        // cleanup
+        Destroy(tex);
     }
 
     private void OnDestroy()
