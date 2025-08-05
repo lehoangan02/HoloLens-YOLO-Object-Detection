@@ -34,7 +34,8 @@ def main():
                 cv2.imshow("Received Frame", frame)
 
             # 3. Pump the GUI event loop (no key checks)
-            cv2.waitKey(1)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
     except KeyboardInterrupt:
         pass
