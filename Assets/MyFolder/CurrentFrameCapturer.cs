@@ -14,12 +14,12 @@ public class CurrentFrameCapturer : MonoBehaviour
     public Screamer screamer;
 
     // IP and port to send the data
-    public string targetIP = "10.0.10.203"; // Replace with your target IP
-    public int targetPort = 5010; // Replace with your target port
+    public string targetIP; // Replace with your target IP
+    public int targetPort; // Replace with your target port
 
     private void Start()
     {
-        targetIP = "192.168.1.7";
+        targetIP = "192.168.1.3";
         targetPort = 5010;
         // Initialize UDP client and endpoint
         udpClient = new UdpClient();
