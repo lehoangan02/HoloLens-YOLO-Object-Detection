@@ -27,6 +27,18 @@ namespace Assets.Scripts
                 BottomRight = center + size / 2
             };
         }
+        public static YoloItem FromVersion8Food(Vector2 center, Vector2 size, float confidence, string classIndex)
+        {
+            return new YoloItem
+            {
+                Center = center,
+                Size = size,
+                Confidence = confidence,
+                MostLikelyClassFood = classIndex,
+                TopLeft = center - size / 2,
+                BottomRight = center + size / 2
+            };
+        }
 
         /// <summary>
         ///     Stores the data from the output tensor.
@@ -80,5 +92,6 @@ namespace Assets.Scripts
         ///     Name of the most likely class for this object.
         /// </summary>
         public ObjectClass MostLikelyClass { get; private set; }
+        public string MostLikelyClassFood { get; private set; }
     }
 }

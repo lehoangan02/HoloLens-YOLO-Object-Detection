@@ -9,12 +9,21 @@ public class OBSFeed : MonoBehaviour
 
     void Start()
     {
-        foreach (var d in WebCamTexture.devices)
-            Debug.Log($"WebCam device: {d.name}");
-        webcam = new WebCamTexture("OBS Virtual Camera", 640, 640);
+        var webcam = WebCamTextureAccess.Instance.WebCamTexture;
+
+        if (webcam == null)
+        {
+            Debug.LogError("No WebCamTexture available from WebCamTextureAccess!");
+            return;
+        }
+
+        // Attach it to the Renderer’s material
         Renderer renderer = GetComponent<Renderer>();
         renderer.material.mainTexture = webcam;
-        webcam.Play();
+
+        // Start playback if not already playing
+        if (!webcam.isPlaying)
+            webcam.Play();
     }
 
 }

@@ -29,6 +29,7 @@ namespace Assets.Scripts
         public string Text
         {
             set => this.TextMesh.text = value;
+            get => this.TextMesh.text;
         }
         
         /// <summary>

@@ -134,7 +134,7 @@ namespace Assets.Scripts
             foreach (DisplayedItem item in this.yoloItems.Where(item => item.IsInCameraView && item.TimesSeen >= Parameters.MinTimesSeen))
             {
                 // Show marker
-                this.ManageTrackingMarker(item);
+                this.ManageTrackingMarkerFood(item);
 
                 // Show debug information
                 yoloDebugOutput.ShowDebugInformationForItem(item);
@@ -154,6 +154,19 @@ namespace Assets.Scripts
 
             ObjectLabelController labelController = item.TrackingMarker.GetComponent<ObjectLabelController>();
             labelController.Text = $"{item.YoloItem.MostLikelyClass} ({Math.Round(item.YoloItem.Confidence * 100, 3)}%)";
+            labelController.UpdatePosition(item.PositionInSpace);
+   
+        }
+        private void ManageTrackingMarkerFood(DisplayedItem item)
+        {
+            if (item.TrackingMarker == null)
+            {
+                item.TrackingMarker = Instantiate(this.labelObject, item.PositionInSpace, Quaternion.identity);
+            }
+
+            ObjectLabelController labelController = item.TrackingMarker.GetComponent<ObjectLabelController>();
+            labelController.Text = $"{item.YoloItem.MostLikelyClassFood} ({Math.Round(item.YoloItem.Confidence * 100, 3)}%)";
+            //Debug.Log(labelController.Text);
             labelController.UpdatePosition(item.PositionInSpace);
    
         }

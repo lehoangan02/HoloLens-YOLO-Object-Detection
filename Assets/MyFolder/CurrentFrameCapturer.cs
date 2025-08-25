@@ -19,7 +19,7 @@ public class CurrentFrameCapturer : MonoBehaviour
 
     private void Start()
     {
-        targetIP = "192.168.1.3";
+        targetIP = "192.168.1.8";
         targetPort = 5010;
         // Initialize UDP client and endpoint
         udpClient = new UdpClient();

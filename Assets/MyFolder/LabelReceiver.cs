@@ -16,11 +16,16 @@ public class LabelReceiver : MonoBehaviour
     public class Detection
     {
         public string @class;
-        public int centerX;
-        public int centerY;
-        public int sizeX;
-        public int sizeY;
+        public BBox bbox;
         public float confidence;
+        [System.Serializable]
+        public class BBox
+        {
+            public float cx;
+            public float cy;
+            public float w;
+            public float h;
+        }
     }
     List<Detection> latestDetections = new List<Detection>();
     List<YoloItem> latestDetectionsYolo = new List<YoloItem>();
@@ -75,15 +80,14 @@ public class LabelReceiver : MonoBehaviour
         {
             foreach (var det in latestDetections)
             {
-                Debug.Log($"Class: {det.@class}, Conf: {det.confidence}, Position: {det.centerY}, {det.centerY}, Size: {det.sizeX}, {det.sizeY}");
+                //Debug.Log($"Class: {det.@class}, Conf: {det.confidence}, Position: {det.bbox.cx}, {det.bbox.cy}," +
+                //    $" Size: {det.bbox.w}, {det.bbox.h}");
             }
         }
         lock (latestDetectionsYolo)
         {
-            foreach (var det in latestDetectionsYolo)
-            {
-                yoloRecognitionHandler.ShowRecognitions(latestDetectionsYolo,cameraTransform);
-            }
+
+            yoloRecognitionHandler.ShowRecognitions(latestDetectionsYolo,cameraTransform);
         }
     }
     public static class JsonHelper
@@ -103,9 +107,12 @@ public class LabelReceiver : MonoBehaviour
     }
     private YoloItem DetectionToYoloV8Item(Detection detection)
     {
-        YoloItem item = YoloItem.FromVersion8(new Vector2(detection.centerX,detection.centerY), new Vector2(detection.sizeX, detection.sizeY),
-            detection.confidence, 1);
-        return item;
+        return YoloItem.FromVersion8Food(
+            new Vector2(detection.bbox.cx, detection.bbox.cy),
+            new Vector2(detection.bbox.w, detection.bbox.h),
+            detection.confidence,
+            detection.@class
+        );
     }
 
 }
