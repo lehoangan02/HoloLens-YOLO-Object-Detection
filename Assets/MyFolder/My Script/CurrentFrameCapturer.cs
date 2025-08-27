@@ -11,7 +11,7 @@ public class CurrentFrameCapturer : MonoBehaviour
     private UdpClient udpClient;
     private IPEndPoint endPoint;
 
-    private const int MaxUdpPacketSize = 65507; // Maximum size for a UDP packet
+    private const int MaxUdpPacketSize = 4096; // Maximum size for a UDP packet
 
     public Screamer screamer;
 
@@ -60,10 +60,23 @@ public class CurrentFrameCapturer : MonoBehaviour
         // encode to JPEG (quality = 50)
         byte[] jpg = tex.EncodeToJPG(50);
 
-        // send in one go (or chunk if > max UDP size)
-        udpClient.Send(jpg, jpg.Length, endPoint);
 
-        // cleanup
+        // Split and send in chunks
+        int totalPackets = (jpg.Length + MaxUdpPacketSize - 1) / MaxUdpPacketSize;
+        for (int i = 0; i < totalPackets; i++)
+        {
+            int offset = i * MaxUdpPacketSize;
+            int size = Math.Min(MaxUdpPacketSize, jpg.Length - offset);
+
+            // Optional: add a simple header for reassembly (e.g., packet index, total packets)
+            byte[] packet = new byte[size + 2];
+            packet[0] = (byte)i;
+            packet[1] = (byte)totalPackets;
+            Array.Copy(jpg, offset, packet, 2, size);
+
+            udpClient.Send(packet, packet.Length, endPoint);
+        }
+
         Destroy(tex);
     }
 
