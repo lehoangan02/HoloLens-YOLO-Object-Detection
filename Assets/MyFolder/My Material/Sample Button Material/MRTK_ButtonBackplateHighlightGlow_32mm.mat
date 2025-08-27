@@ -9,18 +9,14 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: MRTK_ButtonBackplateHighlightGlow_32mm
   m_Shader: {fileID: 4800000, guid: 07c37a0957ad2bb4da11af3fc9747a32, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords:
-  - _ABSOLUTE_SIZES__ON
+  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs: []
@@ -55,8 +51,8 @@ Material:
     m_Colors:
     - _Bottom_Left_: {r: 0.27872726, g: 0.38945454, b: 0.84, a: 1}
     - _Bottom_Right_: {r: 0, g: 0.7852309, b: 0.8392157, a: 1}
-    - _Color_: {r: 0.68235296, g: 1, b: 0.71809185, a: 1}
-    - _Inner_Color_: {r: 0.35686275, g: 0.79607844, b: 0.3650442, a: 1}
+    - _Color_: {r: 0.681, g: 0.6969499, b: 1, a: 1}
+    - _Inner_Color_: {r: 0.35664314, g: 0.3932627, b: 0.79607844, a: 1}
     - _Top_Left_: {r: 0.27872726, g: 0.38945454, b: 0.84, a: 1}
     - _Top_Right_: {r: 0, g: 0.7852309, b: 0.8392157, a: 1}
   m_BuildTextureStacks: []

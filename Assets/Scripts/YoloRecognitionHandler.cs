@@ -159,16 +159,26 @@ namespace Assets.Scripts
         }
         private void ManageTrackingMarkerFood(DisplayedItem item)
         {
+            //if (item.TrackingMarker == null)
+            //{
+            //    item.TrackingMarker = Instantiate(this.labelObject, item.PositionInSpace, Quaternion.identity);
+            //}
+
+            //ObjectLabelController labelController = item.TrackingMarker.GetComponent<ObjectLabelController>();
+            //labelController.Text = $"{item.YoloItem.MostLikelyClassFood} ({Math.Round(item.YoloItem.Confidence * 100, 3)}%)";
+            ////Debug.Log(labelController.Text);
+            //labelController.UpdatePosition(item.PositionInSpace);
+
             if (item.TrackingMarker == null)
             {
                 item.TrackingMarker = Instantiate(this.labelObject, item.PositionInSpace, Quaternion.identity);
             }
 
-            ObjectLabelController labelController = item.TrackingMarker.GetComponent<ObjectLabelController>();
-            labelController.Text = $"{item.YoloItem.MostLikelyClassFood} ({Math.Round(item.YoloItem.Confidence * 100, 3)}%)";
+            NutritionLabelController labelController = item.TrackingMarker.GetComponent<NutritionLabelController>();
+            //labelController.Text = $"{item.YoloItem.MostLikelyClassFood} ({Math.Round(item.YoloItem.Confidence * 100, 3)}%)";
             //Debug.Log(labelController.Text);
             labelController.UpdatePosition(item.PositionInSpace);
-   
+
         }
     }
 }

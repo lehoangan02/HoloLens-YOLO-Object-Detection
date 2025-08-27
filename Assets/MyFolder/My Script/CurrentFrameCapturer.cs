@@ -11,6 +11,8 @@ public class CurrentFrameCapturer : MonoBehaviour
     private UdpClient udpClient;
     private IPEndPoint endPoint;
 
+    private const int MaxUdpPacketSize = 65507; // Maximum size for a UDP packet
+
     public Screamer screamer;
 
     // IP and port to send the data
