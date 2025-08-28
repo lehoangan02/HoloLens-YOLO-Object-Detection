@@ -6,10 +6,18 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using Assets.Scripts;
+using System;
 
 public class LabelReceiver : MonoBehaviour
 {
+    [SerializeField] 
+    private bool udpEnabled = true;
+
     UdpClient udpClient;
+
+    TcpClient tcpClient;
+    NetworkStream networkStream;
+
     Thread receiveThread;
     int port = 5011;
     [System.Serializable]
@@ -33,14 +41,96 @@ public class LabelReceiver : MonoBehaviour
     private CameraTransform cameraTransform;
     void Start()
     {
-        udpClient = new UdpClient(port);
-        receiveThread = new Thread(new ThreadStart(ReceiveData));
+        if (udpEnabled)
+            initUDP();
+        else
+            initTCP();
         receiveThread.IsBackground = true;
         receiveThread.Start();
         Debug.Log($"Listening for YOLO detections on port {port}...");
         yoloRecognitionHandler = gameObject.GetComponent<YoloRecognitionHandler>();
+        if (yoloRecognitionHandler == null)
+        {
+            Debug.LogError("YoloRecognitionHandler component not found on the GameObject.");
+        }
     }
-    void ReceiveData()
+
+    private void initUDP()
+    {
+        udpClient = new UdpClient(port);
+        receiveThread = new Thread(new ThreadStart(ReceiveDataUDP));
+    }
+
+    void initTCP()
+    {
+        try
+        {
+            tcpClient = new TcpClient("192.168.1.8", port); // replace with Python server IP if needed
+            networkStream = tcpClient.GetStream();
+            receiveThread = new Thread(new ThreadStart(ReceiveDataTCP));
+            Debug.Log("TCP connected to Python server.");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("TCP connection failed: " + e.Message);
+        }
+    }
+    void ReceiveDataTCP()
+    {
+        try
+        {
+            while (true)
+            {
+                // 1. Read length prefix (4 bytes)
+                byte[] lengthBytes = new byte[4];
+                int read = networkStream.Read(lengthBytes, 0, 4);
+                if (read < 4)
+                {
+                    Debug.LogWarning("TCP connection closed by server.");
+                    break;
+                }
+                int msgLength = BitConverter.ToInt32(lengthBytes, 0);
+
+                // 2. Read JSON payload
+                byte[] msgBytes = new byte[msgLength];
+                int totalRead = 0;
+                while (totalRead < msgLength)
+                {
+                    int r = networkStream.Read(msgBytes, totalRead, msgLength - totalRead);
+                    if (r == 0)
+                    {
+                        Debug.LogWarning("TCP connection closed while receiving data.");
+                        return;
+                    }
+                    totalRead += r;
+                }
+
+                // 3. Decode JSON
+                string json = Encoding.UTF8.GetString(msgBytes);
+                Detection[] detections = JsonHelper.FromJson<Detection>(json);
+
+                lock (latestDetections)
+                {
+                    latestDetections.Clear();
+                    latestDetections.AddRange(detections);
+                }
+
+                lock (latestDetectionsYolo)
+                {
+                    latestDetectionsYolo.Clear();
+                    foreach (var det in latestDetections)
+                    {
+                        latestDetectionsYolo.Add(DetectionToYoloV8Item(det));
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("TCP Receive error: " + e.Message);
+        }
+    }
+    void ReceiveDataUDP()
     {
         IPEndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0);
         while (true)
@@ -68,7 +158,7 @@ public class LabelReceiver : MonoBehaviour
             }
             catch (System.Exception e)
             {
-                Debug.Log("UDP Receive error: " + e.Message);
+                //Debug.Log("UDP Receive error: " + e.Message);
             }
         }
     }
@@ -76,12 +166,15 @@ public class LabelReceiver : MonoBehaviour
     void Update()
     {
         this.cameraTransform = new CameraTransform(Camera.main);
+        //Debug.Log("Handler: " + yoloRecognitionHandler);
+        //Debug.Log("Main Camera: " + Camera.main);
+
         lock (latestDetections)
         {
             foreach (var det in latestDetections)
             {
-                //Debug.Log($"Class: {det.@class}, Conf: {det.confidence}, Position: {det.bbox.cx}, {det.bbox.cy}," +
-                //    $" Size: {det.bbox.w}, {det.bbox.h}");
+                Debug.Log($"Class: {det.@class}, Conf: {det.confidence}, Position: {det.bbox.cx}, {det.bbox.cy}," +
+                    $" Size: {det.bbox.w}, {det.bbox.h}");
             }
         }
         lock (latestDetectionsYolo)

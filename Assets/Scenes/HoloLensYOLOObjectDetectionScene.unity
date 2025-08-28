@@ -925,7 +925,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &751999521
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1153,6 +1153,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a8e9045c0cfb794e8de16638bf8417f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  udpEnabled: 1
 --- !u!4 &951820241
 Transform:
   m_ObjectHideFlags: 0
@@ -1771,8 +1772,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   screamer: {fileID: 1971259971}
-  targetIP: 10.0.10.203
+  targetIP: 192.168.1.8
   targetPort: 5010
+  udpEnabled: 0
 --- !u!4 &1610131941
 Transform:
   m_ObjectHideFlags: 0

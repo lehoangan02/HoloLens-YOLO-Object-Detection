@@ -77,7 +77,7 @@ public class UDPClient : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.A))
         {
-            Debug.Log("Printing IP\n");
+            //Debug.Log("Printing IP\n");
             LogIPAddress();
 
         }
