@@ -4,10 +4,14 @@ using UnityEngine;
 
 public class NutritionLabelController : MonoBehaviour
 {
-    // Start is called before the first frame update
+    [SerializeField]
+    private LineRenderer lineRenderer;
+    [SerializeField]
+    private GameObject objectCenter;
     void Start()
     {
-        
+        lineRenderer.startWidth = 0.05f;
+        lineRenderer.endWidth = 0.05f;
     }
 
     // Update is called once per frame
@@ -18,5 +22,7 @@ public class NutritionLabelController : MonoBehaviour
     public void UpdatePosition(Vector3 newPosition)
     {
         this.transform.position = newPosition;
+        this.lineRenderer.SetPosition(0, this.objectCenter.transform.position);
+        this.lineRenderer.SetPosition(1, this.transform.position);
     }
 }
