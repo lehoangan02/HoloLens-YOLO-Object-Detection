@@ -122,7 +122,7 @@ public class CurrentFrameCapturer : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.Log("Send failed: " + e);
+            //Debug.LogError("Send failed: " + e);
         }
     }
 
@@ -162,6 +162,25 @@ public class CurrentFrameCapturer : MonoBehaviour
             networkStream = null;
         }
     }
+    public void ReconnectTCP()
+    {
+        try
+        {
+            networkStream?.Close();
+            tcpClient?.Close();
+
+            tcpClient = new TcpClient();
+            tcpClient.Connect(targetIP, targetPort);
+            networkStream = tcpClient.GetStream();
+
+            Debug.Log("TCP reconnected to " + targetIP + ":" + targetPort);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("TCP reconnection failed: " + e);
+        }
+    }
+
 }
 
 //using Assets.Scripts;
