@@ -34,7 +34,7 @@ public class CurrentFrameCapturer : MonoBehaviour
         int imageHeight = WebCamTextureAccess.Instance.WebCamTexture.height;
         Debug.Log($"Webcam image size: {imageWidth}x{imageHeight}");
         var message = "Webcam image size: " + imageWidth + "x" + imageHeight;
-        screamer.ScreamToDialog(message);
+        //screamer.ScreamToDialog(message);
     }
 
     private void Update()

@@ -168,13 +168,24 @@ namespace Assets.Scripts
             //labelController.Text = $"{item.YoloItem.MostLikelyClassFood} ({Math.Round(item.YoloItem.Confidence * 100, 3)}%)";
             ////Debug.Log(labelController.Text);
             //labelController.UpdatePosition(item.PositionInSpace);
-
+            if (item.YoloItem.MostLikelyClassFood == null)
+            {
+                //Debug.LogWarning("MostLikelyClassFood is null. Skipping label creation.");
+                return;
+            }
             if (item.TrackingMarker == null)
             {
                 item.TrackingMarker = Instantiate(this.labelObject, item.PositionInSpace, Quaternion.identity);
             }
 
             NutritionLabelController labelController = item.TrackingMarker.GetComponent<NutritionLabelController>();
+            if (FoodTypes.Instance == null)
+            {
+                Debug.LogError("FoodTypes.Instance is not initialized. Ensure the FoodTypes script is attached to a GameObject in the scene.");
+                return;
+            }
+            //Debug.Log($"MostLikelyClassFood: {item.YoloItem.MostLikelyClassFood}");
+            labelController.SetInfo(FoodTypes.Instance.GetFoodItem(item.YoloItem.MostLikelyClassFood));
             //labelController.Text = $"{item.YoloItem.MostLikelyClassFood} ({Math.Round(item.YoloItem.Confidence * 100, 3)}%)";
             //Debug.Log(labelController.Text);
             labelController.UpdatePosition(item.PositionInSpace);
