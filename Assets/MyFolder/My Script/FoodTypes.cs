@@ -3,6 +3,18 @@ using System.Collections.Generic;
 using UnityEngine;
 using static FoodTypes;
 
+public class FoodItem
+{
+    public string Name { get; private set; }
+    public string ServingType { get; private set; }
+    public Nutrition Nutrition { get; private set; }
+    public FoodItem(string Name, string ServingType, Nutrition nutrition)
+    {
+        this.Nutrition = nutrition;
+        this.Name = Name;
+        this.ServingType = ServingType;
+    }
+}
 public class FoodTypes : MonoBehaviour
 {
     public static FoodTypes Instance { get; private set; }
@@ -33,18 +45,7 @@ public class FoodTypes : MonoBehaviour
             this.Salt = Salt;
         }
     }
-    public class FoodItem
-    {
-        public string Name { get; private set; }
-        public string ServingType { get; private set; }
-        public Nutrition Nutrition { get; private set; }
-        public FoodItem(string Name, string ServingType, Nutrition nutrition)
-        {
-            this.Nutrition = nutrition;
-            this.Name = Name;
-            this.ServingType = ServingType;
-        }
-    }
+    
     public Dictionary<string, FoodItem> Food { get; private set; }
     void Start()
     {
@@ -125,5 +126,16 @@ public class FoodTypes : MonoBehaviour
     void Update()
     {
         
+    }
+    public FoodItem GetFoodItem(string key)
+    {
+        if (Food.ContainsKey(key))
+        {
+            return Food[key];
+        }
+        else
+        {
+            return null;
+        }
     }
 }

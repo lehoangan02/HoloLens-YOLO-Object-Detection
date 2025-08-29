@@ -27,7 +27,7 @@ public class UDPClient : MonoBehaviour
         receiveThread.Start();
         Debug.Log("UDP Client started and listening for messages...");
     }
-    string LogIPAddress()
+    public string LogIPAddress()
     {
         string localIP = string.Empty;
         try
