@@ -8,6 +8,7 @@ public class EyeTracker : MonoBehaviour
     public GazeInteractor gazeInteractor;         // From MRTK3
     public GameObject objectOfInterest;           // The target object
     public GameObject hitPointDisplayPrefab;      // Prefab to show gaze hit point
+    public float maxGazeDistance = 3.0f;          // Max distance for gaze ray
 
     private GameObject hitPointDisplayer;
     private StreamWriter trackerData;
@@ -30,7 +31,7 @@ public class EyeTracker : MonoBehaviour
         if (gazeInteractor == null || objectOfInterest == null) return;
 
         var ray = new Ray(gazeInteractor.rayOriginTransform.position,
-                          gazeInteractor.rayOriginTransform.forward * 3);
+                          gazeInteractor.rayOriginTransform.forward * maxGazeDistance);
 
         if (Physics.Raycast(ray, out var hit))
         {
