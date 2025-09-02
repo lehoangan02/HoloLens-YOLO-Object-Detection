@@ -1,6 +1,7 @@
 using MixedReality.Toolkit.Input;
 using System;
 using System.IO;
+using System.Net.Sockets;
 using UnityEngine;
 
 public class EyeTracker : MonoBehaviour
@@ -54,4 +55,45 @@ public class EyeTracker : MonoBehaviour
     {
         trackerData.Close();
     }
+
+    public string targetIP = "192.168.1.8";
+    public int port = 5012;
+    private void SendFileTCP()
+    {
+        string filePath = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
+        using (TcpClient client = new TcpClient(targetIP, port))
+        using (NetworkStream stream = client.GetStream())
+        using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+        {
+            Debug.Log("Sending file...");
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                stream.Write(buffer, 0, bytesRead);
+            }
+            Console.WriteLine("File sent.");
+        }
+    }
+    public void SendFile()
+    {
+        trackerData.Close();
+
+        try
+        {
+            SendFileTCP();  // may throw
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Failed to send file: {ex.Message}");
+        }
+        finally
+        {
+            // Always reopen trackerData so logging continues
+            var trackerDataPath = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
+            trackerData = new StreamWriter(trackerDataPath, append: true);
+            trackerData.AutoFlush = true;
+        }
+    }
+
 }
