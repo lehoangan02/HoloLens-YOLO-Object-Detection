@@ -13,11 +13,11 @@ public class EyeTracker : MonoBehaviour
 
     private GameObject hitPointDisplayer;
     private StreamWriter trackerData;
+    private bool isTrackingEnabled = false;       // Flag to enable/disable tracking
 
     private void Awake()
     {
-        var trackerDataPath = Path.Combine(Application.persistentDataPath,
-                                           "eyetracking.csv");
+        var trackerDataPath = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
         trackerData = new StreamWriter(trackerDataPath);
         trackerData.AutoFlush = true;
     }
@@ -25,11 +25,12 @@ public class EyeTracker : MonoBehaviour
     private void Start()
     {
         hitPointDisplayer = Instantiate(hitPointDisplayPrefab);
+        hitPointDisplayer.SetActive(false); // Initially disabled
     }
 
     private void Update()
     {
-        if (gazeInteractor == null || objectOfInterest == null) return;
+        if (!isTrackingEnabled || gazeInteractor == null || objectOfInterest == null) return;
 
         var ray = new Ray(gazeInteractor.rayOriginTransform.position,
                           gazeInteractor.rayOriginTransform.forward * maxGazeDistance);
@@ -46,6 +47,8 @@ public class EyeTracker : MonoBehaviour
 
     private void WriteTrackingPoint(Vector3 hitPoint)
     {
+        if (trackerData == null) return;
+
         var relativePoint = objectOfInterest.transform.position - hitPoint;
         trackerData.WriteLine(FormattableString.Invariant(
             $"{relativePoint.x},{relativePoint.y},{relativePoint.z}"));
@@ -56,8 +59,31 @@ public class EyeTracker : MonoBehaviour
         trackerData.Close();
     }
 
+    public void TurnOn()
+    {
+        if (isTrackingEnabled) return;
+
+        isTrackingEnabled = true;
+        if (hitPointDisplayer != null)
+        {
+            hitPointDisplayer.SetActive(true);
+        }
+    }
+
+    public void TurnOff()
+    {
+        if (!isTrackingEnabled) return;
+
+        isTrackingEnabled = false;
+        if (hitPointDisplayer != null)
+        {
+            hitPointDisplayer.SetActive(false);
+        }
+    }
+
     public string targetIP = "192.168.1.8";
     public int port = 5012;
+
     private void SendFileTCP()
     {
         string filePath = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
@@ -75,6 +101,7 @@ public class EyeTracker : MonoBehaviour
             Console.WriteLine("File sent.");
         }
     }
+
     public void SendFile()
     {
         trackerData.Close();
@@ -95,5 +122,17 @@ public class EyeTracker : MonoBehaviour
             trackerData.AutoFlush = true;
         }
     }
-
+    public void DeleteFile()
+    {
+        trackerData.Close();
+        var trackerDataPath = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
+        if (File.Exists(trackerDataPath))
+        {
+            File.Delete(trackerDataPath);
+            Debug.Log("Deleted eyetracking.csv");
+        }
+        // Recreate the file and reopen the StreamWriter
+        trackerData = new StreamWriter(trackerDataPath, append: true);
+        trackerData.AutoFlush = true;
+    }
 }
