@@ -6,10 +6,12 @@ using UnityEngine;
 public class OBSFeed : MonoBehaviour
 {
     WebCamTexture webcam;
+    private bool isEnabled = false;
 
     void Start()
     {
-        var webcam = WebCamTextureAccess.Instance.WebCamTexture;
+        isEnabled = false;
+        webcam = WebCamTextureAccess.Instance.WebCamTexture;
 
         if (webcam == null)
         {
@@ -17,13 +19,61 @@ public class OBSFeed : MonoBehaviour
             return;
         }
 
-        // Attach it to the Renderer’s material
+        // Attach the webcam texture to the material (just once is enough)
         Renderer renderer = GetComponent<Renderer>();
         renderer.material.mainTexture = webcam;
 
-        // Start playback if not already playing
-        if (!webcam.isPlaying)
-            webcam.Play();
+        Disable(); // Make the plane transparent at start
     }
 
+    void Enable()
+    {
+        if (webcam == null)
+        {
+            Debug.LogError("WebCamTexture is not initialized!");
+            return;
+        }
+
+        if (!webcam.isPlaying)
+        {
+            Debug.Log("Attempting to play WebCamTexture...");
+            webcam.Play();
+            Debug.Log($"WebCamTexture isPlaying: {webcam.isPlaying}");
+        }
+
+        Renderer renderer = GetComponent<Renderer>();
+        renderer.material.mainTexture = webcam; // <- âœ… This line was missing
+        Color color = renderer.material.color;
+        color.a = 1f;
+        renderer.material.color = color;
+
+        Debug.Log("Enabled");
+    }
+
+    void Disable()
+    {
+        if (webcam != null && webcam.isPlaying)
+            webcam.Stop();
+
+        Renderer renderer = GetComponent<Renderer>();
+        Color color = renderer.material.color;
+        color.a = 0f;
+        renderer.material.color = color;
+
+        Debug.Log("Disabled");
+    }
+
+    public void Toggle()
+    {
+        if (!isEnabled)
+        {
+            Enable();
+            isEnabled = true;
+        }
+        else
+        {
+            Disable();
+            isEnabled = false;
+        }
+    }
 }
