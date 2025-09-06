@@ -496,7 +496,7 @@ MonoBehaviour:
   objectOfInterest: {fileID: 551490536}
   hitPointDisplayPrefab: {fileID: 8809907542933653407, guid: 682f676b3afb13743862d5af3bcb8b39, type: 3}
   maxHeadDistance: 3
-  targetIP: 192.168.1.8
+  targetIP: 10.0.10.183
   port: 5013
 --- !u!1 &293387976
 GameObject:
@@ -2575,7 +2575,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   screamer: {fileID: 1971259971}
-  targetIP: 10.0.10.203
+  targetIP: 10.0.10.183
   targetPort: 5010
 --- !u!4 &1610131941
 Transform:
@@ -4973,7 +4973,7 @@ MonoBehaviour:
   objectOfInterest: {fileID: 551490536}
   hitPointDisplayPrefab: {fileID: 1102333000426184523, guid: a385d4fef3f87bf4b8e29f7810e55afd, type: 3}
   maxGazeDistance: 3
-  targetIP: 192.168.1.8
+  targetIP: 10.0.10.183
   port: 5012
 --- !u!1001 &9028737152155984526
 PrefabInstance:

@@ -70,17 +70,17 @@ public class UDPClient : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            Debug.Log("Space key pressed! Sending message to Python...");
-            SendToPython(LogIPAddress());
-        }
-        if (Input.GetKeyDown(KeyCode.A))
-        {
-            Debug.Log("Printing IP\n");
-            LogIPAddress();
+        // if (Input.GetKeyDown(KeyCode.Space))
+        // {
+        //     Debug.Log("Space key pressed! Sending message to Python...");
+        //     SendToPython(LogIPAddress());
+        // }
+        // if (Input.GetKeyDown(KeyCode.A))
+        // {
+        //     Debug.Log("Printing IP\n");
+        //     LogIPAddress();
 
-        }
+        // }
     }
 
     void SendToPython(string message)

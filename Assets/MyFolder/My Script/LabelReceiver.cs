@@ -11,7 +11,7 @@ public class LabelReceiver : MonoBehaviour
 {
     UdpClient udpClient;
     Thread receiveThread;
-    int port = 5011;
+    int port = 5014;
     [System.Serializable]
     public class Detection
     {
@@ -33,12 +33,21 @@ public class LabelReceiver : MonoBehaviour
     private CameraTransform cameraTransform;
     void Start()
     {
+        Debug.Log("Start is called");
         udpClient = new UdpClient(port);
         receiveThread = new Thread(new ThreadStart(ReceiveData));
         receiveThread.IsBackground = true;
         receiveThread.Start();
         Debug.Log($"Listening for YOLO detections on port {port}...");
         yoloRecognitionHandler = gameObject.GetComponent<YoloRecognitionHandler>();
+        if (yoloRecognitionHandler == null)
+        {
+            Debug.LogError("Yolo handler is null");
+        }
+        else
+        {
+            Debug.Log("Yolo handler is not null");
+        }
     }
     void ReceiveData()
     {
@@ -86,7 +95,16 @@ public class LabelReceiver : MonoBehaviour
         }
         lock (latestDetectionsYolo)
         {
-
+            if (latestDetectionsYolo == null)
+            {
+                Debug.Log("Label is null");
+                return;
+            }
+            if (yoloRecognitionHandler == null)
+            {
+                Debug.Log("Yolo recognition handler is null");
+                return;
+            }
             yoloRecognitionHandler.ShowRecognitions(latestDetectionsYolo,cameraTransform);
         }
     }

@@ -21,8 +21,6 @@ public class CurrentFrameCapturer : MonoBehaviour
 
     private void Start()
     {
-        targetIP = "192.168.1.8";
-        targetPort = 5010;
         // Initialize UDP client and endpoint
         udpClient = new UdpClient();
         endPoint = new IPEndPoint(IPAddress.Parse(targetIP), targetPort);
@@ -42,6 +40,7 @@ public class CurrentFrameCapturer : MonoBehaviour
         // Capture and send the current webcam texture frame
         if (WebCamTextureAccess.Instance.WebCamTexture.isPlaying)
         {
+            // Debug.Log("Streaming");
             SendCurrentFrame();
         }
     }
