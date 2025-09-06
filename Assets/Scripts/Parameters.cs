@@ -33,7 +33,7 @@ namespace Assets.Scripts
 
         // Parameters for features based on Object Recognition.
         internal const float MinTimesSeen = 4;
-        internal const float ObjectTimeOut = 3f;
+        internal const float ObjectTimeOut = 1.3f;
         internal const float MaxIdenticalObject = 0.4f;
     }
 
