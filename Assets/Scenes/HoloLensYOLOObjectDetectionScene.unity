@@ -2094,6 +2094,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a8e9045c0cfb794e8de16638bf8417f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  udpEnabled: 1
 --- !u!4 &951820241
 Transform:
   m_ObjectHideFlags: 0
@@ -2575,8 +2576,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   screamer: {fileID: 1971259971}
-  targetIP: 10.0.10.183
+  targetIP: 10.0.10.203
   targetPort: 5010
+  udpEnabled: 1
+  no_split: 1
 --- !u!4 &1610131941
 Transform:
   m_ObjectHideFlags: 0

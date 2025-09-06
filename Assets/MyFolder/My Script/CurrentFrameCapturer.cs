@@ -23,6 +23,8 @@ public class CurrentFrameCapturer : MonoBehaviour
 
     [SerializeField]
     private bool udpEnabled = false;
+    [SerializeField]
+    private bool no_split = false;
 
     // Thread & queue
     private Thread workerThread;
@@ -96,18 +98,26 @@ public class CurrentFrameCapturer : MonoBehaviour
 
     private void SendFrameUDP(byte[] jpg)
     {
-        int totalPackets = (jpg.Length + MaxUdpPacketSize - 1) / MaxUdpPacketSize;
-        for (int i = 0; i < totalPackets; i++)
+        if (no_split == false)
         {
-            int offset = i * MaxUdpPacketSize;
-            int size = Math.Min(MaxUdpPacketSize, jpg.Length - offset);
+            int totalPackets = (jpg.Length + MaxUdpPacketSize - 1) / MaxUdpPacketSize;
+            for (int i = 0; i < totalPackets; i++)
+            {
+                int offset = i * MaxUdpPacketSize;
+                int size = Math.Min(MaxUdpPacketSize, jpg.Length - offset);
 
-            byte[] packet = new byte[size + 2];
-            packet[0] = (byte)i;
-            packet[1] = (byte)totalPackets;
-            Array.Copy(jpg, offset, packet, 2, size);
+                byte[] packet = new byte[size + 2];
+                packet[0] = (byte)i;
+                packet[1] = (byte)totalPackets;
+                Array.Copy(jpg, offset, packet, 2, size);
 
-            udpClient.Send(packet, packet.Length, endPoint);
+                udpClient.Send(packet, packet.Length, endPoint);
+            }
+        }
+        else
+        {
+            // send in one go (or chunk if > max UDP size)
+            udpClient.Send(jpg, jpg.Length, endPoint);
         }
     }
 

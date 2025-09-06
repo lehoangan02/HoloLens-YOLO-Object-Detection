@@ -173,8 +173,8 @@ public class LabelReceiver : MonoBehaviour
         {
             foreach (var det in latestDetections)
             {
-                Debug.Log($"Class: {det.@class}, Conf: {det.confidence}, Position: {det.bbox.cx}, {det.bbox.cy}," +
-                    $" Size: {det.bbox.w}, {det.bbox.h}");
+                // Debug.Log($"Class: {det.@class}, Conf: {det.confidence}, Position: {det.bbox.cx}, {det.bbox.cy}," +
+                //     $" Size: {det.bbox.w}, {det.bbox.h}");
             }
         }
         lock (latestDetectionsYolo)
