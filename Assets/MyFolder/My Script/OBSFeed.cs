@@ -1,6 +1,4 @@
 using Assets.Scripts;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class OBSFeed : MonoBehaviour
@@ -19,11 +17,15 @@ public class OBSFeed : MonoBehaviour
             return;
         }
 
-        // Attach the webcam texture to the material (just once is enough)
+        // Assign webcam texture to material
         Renderer renderer = GetComponent<Renderer>();
         renderer.material.mainTexture = webcam;
 
-        Disable(); // Make the plane transparent at start
+        // Set material to transparent mode so alpha works
+        SetMaterialToTransparent();
+
+        // Start disabled (invisible)
+        Disable();
     }
 
     void Enable()
@@ -35,18 +37,9 @@ public class OBSFeed : MonoBehaviour
         }
 
         if (!webcam.isPlaying)
-        {
-            Debug.Log("Attempting to play WebCamTexture...");
             webcam.Play();
-            Debug.Log($"WebCamTexture isPlaying: {webcam.isPlaying}");
-        }
 
-        Renderer renderer = GetComponent<Renderer>();
-        renderer.material.mainTexture = webcam; // <- ✅ This line was missing
-        Color color = renderer.material.color;
-        color.a = 1f;
-        renderer.material.color = color;
-
+        SetAlpha(1f); // Fully visible
         Debug.Log("Enabled");
     }
 
@@ -55,11 +48,7 @@ public class OBSFeed : MonoBehaviour
         if (webcam != null && webcam.isPlaying)
             webcam.Stop();
 
-        Renderer renderer = GetComponent<Renderer>();
-        Color color = renderer.material.color;
-        color.a = 0f;
-        renderer.material.color = color;
-
+        SetAlpha(0f); // Fully transparent
         Debug.Log("Disabled");
     }
 
@@ -75,5 +64,26 @@ public class OBSFeed : MonoBehaviour
             Disable();
             isEnabled = false;
         }
+    }
+
+    void SetAlpha(float alpha)
+    {
+        Material mat = GetComponent<Renderer>().material;
+        Color color = mat.color;
+        color.a = alpha;
+        mat.color = color;
+    }
+
+    void SetMaterialToTransparent()
+    {
+        Material mat = GetComponent<Renderer>().material;
+        mat.SetFloat("_Mode", 3); // 3 = Transparent
+        mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        mat.SetInt("_ZWrite", 0);
+        mat.DisableKeyword("_ALPHATEST_ON");
+        mat.EnableKeyword("_ALPHABLEND_ON");
+        mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        mat.renderQueue = 3000;
     }
 }
