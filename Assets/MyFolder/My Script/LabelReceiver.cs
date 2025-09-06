@@ -19,7 +19,7 @@ public class LabelReceiver : MonoBehaviour
     NetworkStream networkStream;
 
     Thread receiveThread;
-    int port = 5014;
+    int port = 5011;
     [System.Serializable]
     public class Detection
     {
@@ -179,16 +179,7 @@ public class LabelReceiver : MonoBehaviour
         }
         lock (latestDetectionsYolo)
         {
-            if (latestDetectionsYolo == null)
-            {
-                Debug.Log("Label is null");
-                return;
-            }
-            if (yoloRecognitionHandler == null)
-            {
-                Debug.Log("Yolo recognition handler is null");
-                return;
-            }
+
             yoloRecognitionHandler.ShowRecognitions(latestDetectionsYolo,cameraTransform);
         }
     }
