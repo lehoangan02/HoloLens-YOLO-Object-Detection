@@ -1819,15 +1819,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Target: {fileID: 1264600295}
-  m_TargetOffset: {x: 0, y: 0, z: 0.5}
+  m_TargetOffset: {x: 0, y: 0, z: 0}
   m_FollowInLocalSpace: 0
   m_ApplyTargetInLocalSpace: 0
   m_MovementSpeed: 6
   m_MovementSpeedVariancePercentage: 0.25
   m_SnapOnEnable: 1
   m_PositionFollowMode: 1
-  m_MinDistanceAllowed: 0.2
-  m_MaxDistanceAllowed: 0.3
+  m_MinDistanceAllowed: 0.1
+  m_MaxDistanceAllowed: 0.15
   m_TimeUntilThresholdReachesMaxDistance: 3
   m_RotationFollowMode: 1
   m_MinAngleAllowed: 4
