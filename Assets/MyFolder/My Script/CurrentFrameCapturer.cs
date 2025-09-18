@@ -17,7 +17,6 @@ public class CurrentFrameCapturer : MonoBehaviour
 
     private const int MaxUdpPacketSize = 1200;
 
-    public Screamer screamer;
     public string targetIP;
     public int targetPort;
 
@@ -51,7 +50,6 @@ public class CurrentFrameCapturer : MonoBehaviour
         height = WebCamTextureAccess.Instance.WebCamTexture.height;
 
         Debug.Log($"Webcam image size: {width}x{height}");
-        screamer.ScreamToDialog("Webcam image size: " + width + "x" + height);
 
         running = true;
         workerThread = new Thread(WorkerLoop);

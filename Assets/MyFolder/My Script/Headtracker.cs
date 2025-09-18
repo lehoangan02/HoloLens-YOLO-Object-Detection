@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
+using System.Threading.Tasks; 
 using UnityEngine;
 
 public class HeadTracker : MonoBehaviour
@@ -108,14 +109,41 @@ public class HeadTracker : MonoBehaviour
             Console.WriteLine("File sent.");
         }
     }
+    private async Task SendFileTCPAsync()
+    {
+        string filePath = Path.Combine(Application.persistentDataPath, "headtracking.csv");
+        try
+        {
+            using (TcpClient client = new TcpClient())
+            {
+                await client.ConnectAsync(targetIP, port); // Asynchronous connection
+                using (NetworkStream stream = client.GetStream())
+                using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                {
+                    Debug.Log("Sending file...");
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    while ((bytesRead = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0) // Asynchronous read
+                    {
+                        await stream.WriteAsync(buffer, 0, bytesRead); // Asynchronous write
+                    }
+                    Debug.Log("File sent.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Failed to send file: {ex.Message}");
+        }
+    }
 
-    public void SendFile()
+    public async void SendFile()
     {
         trackerData.Close();
 
         try
         {
-            SendFileTCP();  // may throw
+            await SendFileTCPAsync();  // may throw
         }
         catch (Exception ex)
         {
