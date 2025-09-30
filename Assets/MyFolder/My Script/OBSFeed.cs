@@ -39,16 +39,13 @@ public class OBSFeed : MonoBehaviour
         if (!webcam.isPlaying)
             webcam.Play();
 
-        SetAlpha(1f); // Fully visible
+        GetComponent<MeshRenderer>().enabled = false;
         Debug.Log("Enabled");
     }
 
     void Disable()
     {
-        if (webcam != null && webcam.isPlaying)
-            webcam.Stop();
-
-        SetAlpha(0f); // Fully transparent
+        GetComponent<MeshRenderer>().enabled = false;
         Debug.Log("Disabled");
     }
 

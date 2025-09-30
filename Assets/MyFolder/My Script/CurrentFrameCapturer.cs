@@ -31,7 +31,7 @@ public class CurrentFrameCapturer : MonoBehaviour
     private bool running = false;
 
 
-    private int width, height;
+    public int width, height;
 
     private void Start()
     {

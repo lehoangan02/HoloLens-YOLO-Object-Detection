@@ -33,7 +33,7 @@ public class UtilityPanelController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+
     }
     public void MakeTransparent()
     {
@@ -86,5 +86,11 @@ public class UtilityPanelController : MonoBehaviour
     {
         string ipAddress = udpClient.LogIPAddress();
         SetText($"IP: {ipAddress}");
+    }
+    public CurrentFrameCapturer currentFrameCapturer;
+    public void DisplayCameraSize()
+    {
+        string CameraSize = currentFrameCapturer.width + "x" + currentFrameCapturer.height;
+        SetText("Camera size: " + CameraSize);
     }
 }
