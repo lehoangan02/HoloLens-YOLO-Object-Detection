@@ -78,7 +78,7 @@ public class UtilityPanelController : MonoBehaviour
         ToggleTransparency();
         ToggleContent();
     }
-    private void SetText(string text)
+    public void SetText(string text)
     {
         textBox.text = text;
     }
