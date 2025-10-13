@@ -909,6 +909,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 228823364ee5bfe43a36e7ae7a2c6077, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  lineRenderer: {fileID: 0}
+  objectCenter: {fileID: 0}
+  foodNameTextMeshPro: {fileID: 0}
+  servingTextMeshPro: {fileID: 0}
+  caloriesTextMeshPro: {fileID: 0}
+  fatTextMeshPro: {fileID: 0}
+  saturatesTextMeshPro: {fileID: 0}
+  sugarTextMeshPro: {fileID: 0}
+  saltTextMeshPro: {fileID: 0}
+  materialRed: {fileID: 0}
+  materialGreen: {fileID: 0}
+  materialYellow: {fileID: 0}
+  canvasElementRoundedRectCalories: {fileID: 0}
+  canvasElementRoundedRectFat: {fileID: 0}
+  canvasElementRoundedRectSaturates: {fileID: 0}
+  canvasElementRoundedRectSugar: {fileID: 0}
+  canvasElementRoundedRectSalt: {fileID: 0}
 --- !u!1 &5984231814618313081
 GameObject:
   m_ObjectHideFlags: 0
