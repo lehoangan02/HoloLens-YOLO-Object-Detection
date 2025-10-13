@@ -26,7 +26,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _Iridescent_Map_:
-        m_Texture: {fileID: 2800000, guid: 3e597d77b5554954a8af81fb8876865f, type: 3}
+        m_Texture: {fileID: 2800000, guid: 890b0fd887de3d84daeb12f8873b8491, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -73,16 +73,16 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Base_Color_: {r: 0, g: 0, b: 0, a: 1}
-    - _Bottom_Left_: {r: 0.99215686, g: 0.97193366, b: 0.09803923, a: 1}
-    - _Bottom_Right_: {r: 0.6156863, g: 0.2146884, b: 0.1254902, a: 1}
+    - _Bottom_Left_: {r: 0.5566038, g: 0.5553947, b: 0.50146854, a: 0.83137256}
+    - _Bottom_Right_: {r: 0.3679245, g: 0.3679245, b: 0.3679245, a: 1}
     - _ClipRect: {r: -32767, g: -32767, b: 32767, a: 32767}
     - _ClipRectRadii: {r: 10, g: 10, b: 10, a: 10}
-    - _Gradient_Color_: {r: 0.745, g: 0.745, b: 0.745, a: 1}
+    - _Gradient_Color_: {r: 0.47430304, g: 0.2267711, b: 0.5283019, a: 1}
     - _Highlight_Color_: {r: 0.97999996, g: 0.97999996, b: 0.97999996, a: 1}
     - _Highlight_Transform_: {r: 1, g: 1, b: 0, a: 0}
     - _Iridescence_Tint_: {r: 1, g: 1, b: 1, a: 1}
     - _Line_Color_: {r: 0.30860388, g: 0.40065098, b: 0.6039216, a: 1}
     - _OccludedColor: {r: 0, g: 0.5, b: 1, a: 1}
-    - _Top_Left_: {r: 0.5019608, g: 0.39847416, b: 0, a: 1}
-    - _Top_Right_: {r: 0.8509804, g: 0.7241409, b: 0, a: 1}
+    - _Top_Left_: {r: 0.028301895, g: 0.028301895, b: 0.028301895, a: 1}
+    - _Top_Right_: {r: 0.8018868, g: 0.8018868, b: 0.8018868, a: 1}
   m_BuildTextureStacks: []

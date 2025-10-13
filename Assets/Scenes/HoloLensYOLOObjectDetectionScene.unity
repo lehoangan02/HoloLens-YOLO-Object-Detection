@@ -3060,7 +3060,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3c0765f70ad6da4eb7f53a92df51efd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetIP: 10.0.10.183
+  targetIP: 192.168.1.6
   targetPort: 5010
   udpEnabled: 1
   no_split: 1

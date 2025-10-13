@@ -1406,7 +1406,7 @@ MonoBehaviour:
   canvasElementRoundedRectFat: {fileID: 1112161375280159420}
   canvasElementRoundedRectSaturates: {fileID: 4901400420169810358}
   canvasElementRoundedRectSugar: {fileID: 5502622924040736595}
-  canvasElementRoundedRectSalt: {fileID: 1159975956587676682}
+  canvasElementRoundedRectSalt: {fileID: 3405548722629710438}
 --- !u!120 &6500906165052896097
 LineRenderer:
   serializedVersion: 2

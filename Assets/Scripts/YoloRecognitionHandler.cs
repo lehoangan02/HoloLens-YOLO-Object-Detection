@@ -130,16 +130,27 @@ namespace Assets.Scripts
 
         private void TriggerDetectionActions()
         {
-            // Only apply actions if item have been seen multiple times.
-            foreach (DisplayedItem item in this.yoloItems.Where(item => item.IsInCameraView && item.TimesSeen >= Parameters.MinTimesSeen))
+            // Only apply actions if item has been seen multiple times.
+            var visibleItems = this.yoloItems
+                .Where(item => item.IsInCameraView && item.TimesSeen >= Parameters.MinTimesSeen)
+                .ToList();
+
+            // Group by food type and only take one (e.g., most confident) per type
+            var uniqueFoodItems = visibleItems
+                .GroupBy(item => item.YoloItem.MostLikelyClassFood)
+                .Select(group => group.OrderByDescending(i => i.YoloItem.Confidence).First())
+                .ToList();
+
+            foreach (DisplayedItem item in uniqueFoodItems)
             {
-                // Show marker
+                // Show marker (only one per food type)
                 this.ManageTrackingMarkerFood(item);
 
                 // Show debug information
                 yoloDebugOutput.ShowDebugInformationForItem(item);
             }
         }
+
 
         /// <summary>
         ///     Create debug marker if it does not exist or move it to the correct position
