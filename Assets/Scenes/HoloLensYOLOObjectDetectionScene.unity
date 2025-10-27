@@ -1824,7 +1824,7 @@ Transform:
   m_GameObject: {fileID: 849384421}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.73, y: 1.5232779, z: 1.005}
+  m_LocalPosition: {x: -0.214, y: 1.65, z: 0.8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1850,7 +1850,7 @@ MonoBehaviour:
   m_MovementSpeed: 6
   m_MovementSpeedVariancePercentage: 0.25
   m_SnapOnEnable: 1
-  m_PositionFollowMode: 1
+  m_PositionFollowMode: 0
   m_MinDistanceAllowed: 0.25
   m_MaxDistanceAllowed: 0.3
   m_TimeUntilThresholdReachesMaxDistance: 3
@@ -2523,11 +2523,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 4eb50ebf7fda5c942b742986888ec248, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.01
+      value: 0.003
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 4eb50ebf7fda5c942b742986888ec248, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.956
+      value: 1.961
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 4eb50ebf7fda5c942b742986888ec248, type: 3}
       propertyPath: m_LocalPosition.z
@@ -3060,7 +3060,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3c0765f70ad6da4eb7f53a92df51efd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetIP: 10.0.10.129
+  targetIP: 10.0.10.183
   targetPort: 5010
   udpEnabled: 1
   no_split: 1
