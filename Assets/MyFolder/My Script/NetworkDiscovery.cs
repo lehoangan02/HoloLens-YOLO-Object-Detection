@@ -138,7 +138,7 @@ public class NetworkDiscovery : MonoBehaviour
                     // for maximum compatibility across routers
                     sock.SendTo(msg, subnetEP);
                     sock.SendTo(msg, broadcastEP);
-                    Debug.Log($"[NetworkDiscovery] Broadcast HOLOLENS:{_holoLensIP} → {subnetEP.Address} + 255.255.255.255");
+                    //Debug.Log($"[NetworkDiscovery] Broadcast HOLOLENS:{_holoLensIP} → {subnetEP.Address} + 255.255.255.255");
                 }
                 catch (Exception e)
                 {
@@ -167,7 +167,7 @@ public class NetworkDiscovery : MonoBehaviour
                 udp.Client.Bind(new IPEndPoint(IPAddress.Any, MacListenPort));
                 udp.Client.ReceiveTimeout = 1000;
 
-                Debug.Log($"[NetworkDiscovery] Socket bound — listening on port {MacListenPort}");
+                //Debug.Log($"[NetworkDiscovery] Socket bound — listening on port {MacListenPort}");
 
                 var remoteEP = new IPEndPoint(IPAddress.Any, 0);
                 while (_running)
@@ -175,16 +175,16 @@ public class NetworkDiscovery : MonoBehaviour
                     try
                     {
                         byte[] data = udp.Receive(ref remoteEP);
-                        Debug.Log($"[NetworkDiscovery] Packet from {remoteEP}: {data.Length} bytes");
+                        //Debug.Log($"[NetworkDiscovery] Packet from {remoteEP}: {data.Length} bytes");
                         string text = Encoding.UTF8.GetString(data).Trim();
-                        Debug.Log($"[NetworkDiscovery] Message: '{text}'");
+                        //Debug.Log($"[NetworkDiscovery] Message: '{text}'");
                         if (text.StartsWith("MAC:"))
                         {
                             string ip = text.Substring(4);
                             if (ip != MacIP)
                             {
                                 MacIP = ip;
-                                Debug.Log($"[NetworkDiscovery] Mac IP: {ip}");
+                                //Debug.Log($"[NetworkDiscovery] Mac IP: {ip}");
                                 OnMacIPChanged?.Invoke(ip);
                             }
                         }
