@@ -28,6 +28,7 @@ public class UtilityPanelController : MonoBehaviour
         {
             Debug.LogError("No TextBox child object found!");
         }
+        ToogleVisibility();
     }
 
     // Update is called once per frame
