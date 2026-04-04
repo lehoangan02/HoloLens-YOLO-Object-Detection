@@ -23,6 +23,7 @@ public class EyeTracker : MonoBehaviour
         var trackerDataPath = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
         trackerData = new StreamWriter(trackerDataPath);
         trackerData.AutoFlush = true;
+        trackerData.WriteLine("timestamp_utc,rel_x,rel_y,rel_z");
     }
 
     private void Start()
@@ -52,9 +53,10 @@ public class EyeTracker : MonoBehaviour
     {
         if (trackerData == null) return;
 
-        var relativePoint = objectOfInterest.transform.position - hitPoint;
+        var    relativePoint = objectOfInterest.transform.position - hitPoint;
+        string ts            = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         trackerData.WriteLine(FormattableString.Invariant(
-            $"{relativePoint.x},{relativePoint.y},{relativePoint.z}"));
+            $"{ts},{relativePoint.x},{relativePoint.y},{relativePoint.z}"));
     }
 
     private void OnDestroy()
@@ -130,7 +132,8 @@ public class EyeTracker : MonoBehaviour
             File.Delete(trackerDataPath);
             Debug.Log("[EyeTracker] Deleted eyetracking.csv");
         }
-        trackerData = new StreamWriter(trackerDataPath, append: true);
+        trackerData = new StreamWriter(trackerDataPath, append: false);
         trackerData.AutoFlush = true;
+        trackerData.WriteLine("timestamp_utc,rel_x,rel_y,rel_z");
     }
 }

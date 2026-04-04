@@ -22,6 +22,7 @@ public class HeadTracker : MonoBehaviour
         var trackerDataPath = Path.Combine(Application.persistentDataPath, "headtracking.csv");
         trackerData = new StreamWriter(trackerDataPath);
         trackerData.AutoFlush = true;
+        trackerData.WriteLine("timestamp_utc,rel_x,rel_y,rel_z");
     }
 
     private void Start()
@@ -51,16 +52,17 @@ public class HeadTracker : MonoBehaviour
     {
         if (trackerData == null) return;
 
+        string ts = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         if (objectOfInterest != null)
         {
             var relativePoint = objectOfInterest.transform.position - hitPoint;
             trackerData.WriteLine(FormattableString.Invariant(
-                $"{relativePoint.x},{relativePoint.y},{relativePoint.z}"));
+                $"{ts},{relativePoint.x},{relativePoint.y},{relativePoint.z}"));
         }
         else
         {
             trackerData.WriteLine(FormattableString.Invariant(
-                $"{hitPoint.x},{hitPoint.y},{hitPoint.z}"));
+                $"{ts},{hitPoint.x},{hitPoint.y},{hitPoint.z}"));
         }
     }
 
@@ -151,8 +153,9 @@ public class HeadTracker : MonoBehaviour
         finally
         {
             var trackerDataPath = Path.Combine(Application.persistentDataPath, "headtracking.csv");
-            trackerData = new StreamWriter(trackerDataPath, append: true);
+            trackerData = new StreamWriter(trackerDataPath, append: false);
             trackerData.AutoFlush = true;
+            trackerData.WriteLine("timestamp_utc,rel_x,rel_y,rel_z");
         }
     }
 }
