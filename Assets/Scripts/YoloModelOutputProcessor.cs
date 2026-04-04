@@ -27,30 +27,29 @@ namespace Assets.Scripts
 
         private static List<YoloItem> ProcessModelOutputVersion8(TensorFloat tensor, float threshold)
         {
-            List<YoloItem> boxesMeetingConfidenceLevel = new();
-            for (int boxIndex = 0; boxIndex < tensor.shape[2]; boxIndex++)
+            List<YoloItem> results = new();
+            int numBoxes = tensor.shape[2];
+            int numClasses = tensor.shape[1] - 4;
+
+            for (int boxIndex = 0; boxIndex < numBoxes; boxIndex++)
             {
-                // get most likely class
-                List<float> classProbabilities = new();
-                for (int i = 4; i < tensor.shape[1]; i++)
+                // Single-pass: find max class probability and its index simultaneously
+                float maxProb = float.MinValue;
+                int maxIndex = 0;
+                for (int i = 0; i < numClasses; i++)
                 {
-                    classProbabilities.Add(tensor[0, i, boxIndex]);
+                    float p = tensor[0, i + 4, boxIndex];
+                    if (p > maxProb) { maxProb = p; maxIndex = i; }
                 }
 
-                float confidence = classProbabilities.Max();
-                if (confidence < threshold)
-                {
-                    continue;
-                }
+                if (maxProb < threshold) continue;
 
-                // read dimension data from tensor
                 Vector2 center = new(tensor[0, 0, boxIndex], tensor[0, 1, boxIndex]);
-                Vector2 size = new(tensor[0, 2, boxIndex], tensor[0, 3, boxIndex]);
-                int maxIndex = classProbabilities.IndexOf(confidence);
-                boxesMeetingConfidenceLevel.Add(YoloItem.FromVersion8(center, size, confidence, maxIndex));
+                Vector2 size   = new(tensor[0, 2, boxIndex], tensor[0, 3, boxIndex]);
+                results.Add(YoloItem.FromVersion8(center, size, maxProb, maxIndex));
             }
 
-            return boxesMeetingConfidenceLevel;
+            return results;
         }
 
         private static List<YoloItem> ProcessModelOutputVersion10(TensorFloat tensor, float threshold)

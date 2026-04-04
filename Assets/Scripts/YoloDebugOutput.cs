@@ -111,17 +111,17 @@ namespace Assets.Scripts
         {
             if (this.quad != null)
             {
-                Object.DestroyImmediate(this.quad);
+                Object.Destroy(this.quad);
             }
 
             if (this.outputTexture != null)
             {
-                Object.DestroyImmediate(this.outputTexture);
+                Object.Destroy(this.outputTexture);
             }
 
             if (this.intermediateTexture != null)
             {
-                Object.DestroyImmediate(this.intermediateTexture);
+                Object.Destroy(this.intermediateTexture);
             }
         }
 
@@ -145,7 +145,7 @@ namespace Assets.Scripts
 
             foreach (GameObject cube in this.cubes)
             {
-                Object.DestroyImmediate(cube);
+                Object.Destroy(cube);
             }
 
             this.cubes = null;
@@ -272,7 +272,7 @@ namespace Assets.Scripts
             // Reset line renderer
             foreach (GameObject boundingBox in this.lineRendererObjects)
             {
-                Object.DestroyImmediate(boundingBox);
+                Object.Destroy(boundingBox);
             }
             this.lineRendererObjects.Clear();
         }

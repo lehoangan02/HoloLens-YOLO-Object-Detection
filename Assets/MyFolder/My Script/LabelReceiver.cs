@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Net.Sockets;
@@ -10,64 +9,50 @@ using System;
 
 public class LabelReceiver : MonoBehaviour
 {
-    [SerializeField] 
+    [SerializeField]
     private bool udpEnabled = true;
 
-    UdpClient udpClient;
+    private UdpClient udpClient;
+    private TcpClient tcpClient;
+    private NetworkStream networkStream;
+    private Thread receiveThread;
+    private volatile bool running;
+    private const int Port = 5014;
 
-    TcpClient tcpClient;
-    NetworkStream networkStream;
-
-    Thread receiveThread;
-    int port = 5014;
-    [System.Serializable]
-    public class Detection
-    {
-        public string @class;
-        public BBox bbox;
-        public float confidence;
-        [System.Serializable]
-        public class BBox
-        {
-            public float cx;
-            public float cy;
-            public float w;
-            public float h;
-        }
-    }
-    List<Detection> latestDetections = new List<Detection>();
-    List<YoloItem> latestDetectionsYolo = new List<YoloItem>();
+    private readonly List<YoloItem> latestDetectionsYolo = new();
     private YoloRecognitionHandler yoloRecognitionHandler;
     private CameraTransform cameraTransform;
+
     void Start()
     {
+        running = true;
         if (udpEnabled)
-            initUDP();
+            InitUDP();
         else
-            initTCP();
+            InitTCP();
+
         receiveThread.IsBackground = true;
         receiveThread.Start();
-        Debug.Log($"Listening for YOLO detections on port {port}...");
+        Debug.Log($"Listening for YOLO detections on port {Port}...");
+
         yoloRecognitionHandler = gameObject.GetComponent<YoloRecognitionHandler>();
         if (yoloRecognitionHandler == null)
-        {
             Debug.LogError("YoloRecognitionHandler component not found on the GameObject.");
-        }
     }
 
-    private void initUDP()
+    private void InitUDP()
     {
-        udpClient = new UdpClient(port);
-        receiveThread = new Thread(new ThreadStart(ReceiveDataUDP));
+        udpClient = new UdpClient(Port);
+        receiveThread = new Thread(ReceiveDataUDP);
     }
 
-    void initTCP()
+    private void InitTCP()
     {
         try
         {
-            tcpClient = new TcpClient("192.168.1.8", port); // replace with Python server IP if needed
+            tcpClient = new TcpClient("192.168.1.8", Port);
             networkStream = tcpClient.GetStream();
-            receiveThread = new Thread(new ThreadStart(ReceiveDataTCP));
+            receiveThread = new Thread(ReceiveDataTCP);
             Debug.Log("TCP connected to Python server.");
         }
         catch (Exception e)
@@ -75,13 +60,13 @@ public class LabelReceiver : MonoBehaviour
             Debug.LogError("TCP connection failed: " + e.Message);
         }
     }
-    void ReceiveDataTCP()
+
+    private void ReceiveDataTCP()
     {
         try
         {
-            while (true)
+            while (running)
             {
-                // 1. Read length prefix (4 bytes)
                 byte[] lengthBytes = new byte[4];
                 int read = networkStream.Read(lengthBytes, 0, 4);
                 if (read < 4)
@@ -91,7 +76,6 @@ public class LabelReceiver : MonoBehaviour
                 }
                 int msgLength = BitConverter.ToInt32(lengthBytes, 0);
 
-                // 2. Read JSON payload
                 byte[] msgBytes = new byte[msgLength];
                 int totalRead = 0;
                 while (totalRead < msgLength)
@@ -105,100 +89,93 @@ public class LabelReceiver : MonoBehaviour
                     totalRead += r;
                 }
 
-                // 3. Decode JSON
                 string json = Encoding.UTF8.GetString(msgBytes);
                 Detection[] detections = JsonHelper.FromJson<Detection>(json);
-
-                lock (latestDetections)
-                {
-                    latestDetections.Clear();
-                    latestDetections.AddRange(detections);
-                }
+                if (detections == null) continue;
 
                 lock (latestDetectionsYolo)
                 {
                     latestDetectionsYolo.Clear();
-                    foreach (var det in latestDetections)
-                    {
-                        latestDetectionsYolo.Add(DetectionToYoloV8Item(det));
-                    }
+                    foreach (var det in detections)
+                        latestDetectionsYolo.Add(DetectionToYoloItem(det));
                 }
             }
         }
         catch (Exception e)
         {
-            Debug.LogError("TCP Receive error: " + e.Message);
+            if (running) Debug.LogError("TCP Receive error: " + e.Message);
         }
     }
-    void ReceiveDataUDP()
+
+    private void ReceiveDataUDP()
     {
         IPEndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0);
-        while (true)
+        while (running)
         {
             try
             {
                 byte[] data = udpClient.Receive(ref remoteEP);
                 string json = Encoding.UTF8.GetString(data);
                 Detection[] detections = JsonHelper.FromJson<Detection>(json);
-                lock (latestDetections)
-                {
-                    latestDetections.Clear();
-                    latestDetections.AddRange(detections);
-                    
-                }
+                if (detections == null) continue;
+
                 lock (latestDetectionsYolo)
                 {
                     latestDetectionsYolo.Clear();
-                    for (int i = 0; i < latestDetections.Count; i++)
-                    {
-                        YoloItem cur = DetectionToYoloV8Item(latestDetections[i]);
-                        latestDetectionsYolo.Add(cur);
-                    }
+                    foreach (var det in detections)
+                        latestDetectionsYolo.Add(DetectionToYoloItem(det));
                 }
             }
-            catch (System.Exception e)
+            catch (Exception)
             {
-                //Debug.Log("UDP Receive error: " + e.Message);
+                // socket closed or malformed packet — loop will exit via running flag
             }
         }
     }
-    // Update is called once per frame
+
     void Update()
     {
-        this.cameraTransform = new CameraTransform(Camera.main);
-        //Debug.Log("Handler: " + yoloRecognitionHandler);
-        //Debug.Log("Main Camera: " + Camera.main);
+        if (yoloRecognitionHandler == null) return;
 
-        lock (latestDetections)
-        {
-            foreach (var det in latestDetections)
-            {
-                Debug.Log($"Class: {det.@class}, Conf: {det.confidence}, Position: {det.bbox.cx}, {det.bbox.cy}," +
-                    $" Size: {det.bbox.w}, {det.bbox.h}");
-            }
-        }
+        cameraTransform = new CameraTransform(Camera.main);
+
+        // Snapshot inside lock, then release before heavy work
+        List<YoloItem> snapshot;
         lock (latestDetectionsYolo)
         {
-            if (latestDetectionsYolo == null)
-            {
-                Debug.Log("Label is null");
-                return;
-            }
-            if (yoloRecognitionHandler == null)
-            {
-                Debug.Log("Yolo recognition handler is null");
-                return;
-            }
-            yoloRecognitionHandler.ShowRecognitions(latestDetectionsYolo,cameraTransform);
+            if (latestDetectionsYolo.Count == 0) return;
+            snapshot = new List<YoloItem>(latestDetectionsYolo);
         }
+
+        yoloRecognitionHandler.ShowRecognitions(snapshot, cameraTransform);
     }
+
+    private void OnDestroy()
+    {
+        running = false;
+        udpClient?.Close();
+        networkStream?.Close();
+        tcpClient?.Close();
+        receiveThread?.Join(500);
+    }
+
+    private static YoloItem DetectionToYoloItem(Detection det)
+    {
+        return YoloItem.FromVersion8Food(
+            new Vector2(det.bbox.cx, det.bbox.cy),
+            new Vector2(det.bbox.w, det.bbox.h),
+            det.confidence,
+            det.@class
+        );
+    }
+
     public static class JsonHelper
     {
         public static T[] FromJson<T>(string json)
         {
             string newJson = "{\"array\":" + json + "}";
             Wrapper<T> wrapper = JsonUtility.FromJson<Wrapper<T>>(newJson);
-            return wrapper.array;
+            return wrapper?.array;
         }
 
         [System.Serializable]
@@ -207,14 +184,18 @@ public class LabelReceiver : MonoBehaviour
             public T[] array;
         }
     }
-    private YoloItem DetectionToYoloV8Item(Detection detection)
-    {
-        return YoloItem.FromVersion8Food(
-            new Vector2(detection.bbox.cx, detection.bbox.cy),
-            new Vector2(detection.bbox.w, detection.bbox.h),
-            detection.confidence,
-            detection.@class
-        );
-    }
 
+    [System.Serializable]
+    public class Detection
+    {
+        public string @class;
+        public BBox bbox;
+        public float confidence;
+
+        [System.Serializable]
+        public class BBox
+        {
+            public float cx, cy, w, h;
+        }
+    }
 }
