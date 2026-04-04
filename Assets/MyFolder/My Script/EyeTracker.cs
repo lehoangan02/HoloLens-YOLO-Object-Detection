@@ -15,6 +15,7 @@ public class EyeTracker : MonoBehaviour
     private GameObject   hitPointDisplayer;
     private StreamWriter trackerData;
     private bool         isTrackingEnabled = false;
+    private int          _writeCount       = 0;
 
     public int port = 5012;
 
@@ -22,7 +23,7 @@ public class EyeTracker : MonoBehaviour
     {
         var trackerDataPath = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
         trackerData = new StreamWriter(trackerDataPath);
-        trackerData.AutoFlush = true;
+        trackerData.AutoFlush = false;
         trackerData.WriteLine("timestamp_utc,rel_x,rel_y,rel_z");
     }
 
@@ -57,6 +58,7 @@ public class EyeTracker : MonoBehaviour
         string ts            = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         trackerData.WriteLine(FormattableString.Invariant(
             $"{ts},{relativePoint.x},{relativePoint.y},{relativePoint.z}"));
+        if (++_writeCount % 30 == 0) trackerData.Flush();
     }
 
     private void OnDestroy()
@@ -93,7 +95,7 @@ public class EyeTracker : MonoBehaviour
         {
             var trackerDataPath = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
             trackerData = new StreamWriter(trackerDataPath, append: true);
-            trackerData.AutoFlush = true;
+            trackerData.AutoFlush = false;
         }
     }
 
@@ -143,7 +145,7 @@ public class EyeTracker : MonoBehaviour
             Debug.Log("[EyeTracker] Deleted eyetracking.csv");
         }
         trackerData = new StreamWriter(trackerDataPath, append: false);
-        trackerData.AutoFlush = true;
+        trackerData.AutoFlush = false;
         trackerData.WriteLine("timestamp_utc,rel_x,rel_y,rel_z");
     }
 }

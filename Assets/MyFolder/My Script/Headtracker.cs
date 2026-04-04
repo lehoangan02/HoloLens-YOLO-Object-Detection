@@ -14,6 +14,7 @@ public class HeadTracker : MonoBehaviour
     private GameObject   hitPointDisplayer;
     private StreamWriter trackerData;
     private bool         isTrackingEnabled = false;
+    private int          _writeCount       = 0;
 
     public int port = 5013;
 
@@ -21,7 +22,7 @@ public class HeadTracker : MonoBehaviour
     {
         var trackerDataPath = Path.Combine(Application.persistentDataPath, "headtracking.csv");
         trackerData = new StreamWriter(trackerDataPath);
-        trackerData.AutoFlush = true;
+        trackerData.AutoFlush = false;
         trackerData.WriteLine("timestamp_utc,rel_x,rel_y,rel_z");
     }
 
@@ -64,6 +65,7 @@ public class HeadTracker : MonoBehaviour
             trackerData.WriteLine(FormattableString.Invariant(
                 $"{ts},{hitPoint.x},{hitPoint.y},{hitPoint.z}"));
         }
+        if (++_writeCount % 30 == 0) trackerData.Flush();
     }
 
     private void OnDestroy()
@@ -100,7 +102,7 @@ public class HeadTracker : MonoBehaviour
         {
             var trackerDataPath = Path.Combine(Application.persistentDataPath, "headtracking.csv");
             trackerData = new StreamWriter(trackerDataPath, append: true);
-            trackerData.AutoFlush = true;
+            trackerData.AutoFlush = false;
         }
     }
 
@@ -164,7 +166,7 @@ public class HeadTracker : MonoBehaviour
         {
             var trackerDataPath = Path.Combine(Application.persistentDataPath, "headtracking.csv");
             trackerData = new StreamWriter(trackerDataPath, append: false);
-            trackerData.AutoFlush = true;
+            trackerData.AutoFlush = false;
             trackerData.WriteLine("timestamp_utc,rel_x,rel_y,rel_z");
         }
     }

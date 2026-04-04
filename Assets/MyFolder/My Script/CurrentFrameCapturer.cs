@@ -35,9 +35,14 @@ public class CurrentFrameCapturer : MonoBehaviour
     // Set to true only after Start() coroutine fully completes
     private bool   _initialized = false;
     private bool   _loggedFirst = false;
-    private ushort _frameId     = 0;      // wraps 0–65535, used to detect frame boundaries
+    private ushort _frameId     = 0;
 
     public int width, height;
+
+    // Pre-allocated GPU/CPU resources — avoids per-frame GC allocation
+    private RenderTexture _sendRT;
+    private Texture2D     _sendTex;
+    private readonly Rect _sendRect = new Rect(0, 0, SendWidth, SendHeight);
 
     // ── Unity lifecycle ──────────────────────────────────────────────────── //
 
@@ -73,6 +78,9 @@ public class CurrentFrameCapturer : MonoBehaviour
         height = WebCamTextureAccess.Instance.WebCamTexture.height;
         Debug.Log($"[CurrentFrameCapturer] Webcam: {width}x{height}");
 
+        _sendRT  = new RenderTexture(SendWidth, SendHeight, 0, RenderTextureFormat.ARGB32);
+        _sendTex = new Texture2D(SendWidth, SendHeight, TextureFormat.RGBA32, false);
+
         running      = true;
         workerThread = new Thread(WorkerLoop) { IsBackground = true };
         workerThread.Start();
@@ -94,22 +102,23 @@ public class CurrentFrameCapturer : MonoBehaviour
         if (!_initialized) return;
 
         var webcam = WebCamTextureAccess.Instance.WebCamTexture;
-        if (webcam.isPlaying && webcam.width > 16)
+        // didUpdateThisFrame: skip frames where the camera hasn't produced new data
+        // (Update runs at ~60fps but camera is only 4fps — avoids 15 redundant encodes)
+        if (webcam.isPlaying && webcam.didUpdateThisFrame)
         {
-            // Scale to SendWidth×SendHeight via GPU blit — preserves aspect ratio, no distortion
-            var rt = RenderTexture.GetTemporary(SendWidth, SendHeight, 0, RenderTextureFormat.ARGB32);
-            Graphics.Blit(webcam, rt);
+            Graphics.Blit(webcam, _sendRT);
 
             var prev = RenderTexture.active;
-            RenderTexture.active = rt;
-            var tex = new Texture2D(SendWidth, SendHeight, TextureFormat.RGBA32, false);
-            tex.ReadPixels(new Rect(0, 0, SendWidth, SendHeight), 0, 0);
-            tex.Apply();
+            RenderTexture.active = _sendRT;
+            _sendTex.ReadPixels(_sendRect, 0, 0);
+            _sendTex.Apply();
             RenderTexture.active = prev;
-            RenderTexture.ReleaseTemporary(rt);
 
-            byte[] jpg = tex.EncodeToJPG(50);
-            Destroy(tex);
+            byte[] jpg = _sendTex.EncodeToJPG(50);
+
+            // Drop oldest frame if worker hasn't caught up — prefer latest frame
+            while (frameQueue.Count > 1)
+                frameQueue.TryDequeue(out _);
 
             frameQueue.Enqueue(jpg);
         }
@@ -124,6 +133,8 @@ public class CurrentFrameCapturer : MonoBehaviour
             NetworkDiscovery.Instance.OnMacIPChanged -= OnMacIPChanged;
 
         udpClient?.Close();
+        _sendRT?.Release();
+        if (_sendTex != null) Destroy(_sendTex);
     }
 
     // ── NetworkDiscovery callback (background thread) ────────────────────── //
