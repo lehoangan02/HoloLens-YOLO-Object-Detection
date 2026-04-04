@@ -125,11 +125,14 @@ public class NetworkDiscovery : MonoBehaviour
     {
         try
         {
-            using (var udp = new UdpClient())
+            // EnableBroadcast is required on some platforms (Windows/HoloLens) to RECEIVE broadcasts
+            using (var udp = new UdpClient(MacListenPort))
             {
+                udp.EnableBroadcast = true;
                 udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                udp.Client.Bind(new IPEndPoint(IPAddress.Any, MacListenPort));
                 udp.Client.ReceiveTimeout = 1000; // 1 s so we can check _running
+
+                Debug.Log($"[NetworkDiscovery] Listening for Mac IP on port {MacListenPort}...");
 
                 var remoteEP = new IPEndPoint(IPAddress.Any, 0);
                 while (_running)
