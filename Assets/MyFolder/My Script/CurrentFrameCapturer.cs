@@ -12,7 +12,7 @@ public class CurrentFrameCapturer : MonoBehaviour
     private UdpClient           udpClient;
     private volatile IPEndPoint endPoint;  // volatile — updated from main thread, read by worker
 
-    private const int  MaxUdpPacketSize = 1200;
+    private const int  MaxUdpPacketSize = 8192;  // ~7 chunks/frame at 896×504 — stable on WiFi
     private const int  FramePort        = 5016;   // must match FRAME_PORT in controller_app.py
     private const bool no_split         = false;  // chunked UDP
 
@@ -31,7 +31,8 @@ public class CurrentFrameCapturer : MonoBehaviour
     private volatile string _pendingIP        = null;
 
     // Set to true only after Start() coroutine fully completes
-    private bool _initialized = false;
+    private bool _initialized  = false;
+    private bool _loggedFirst  = false;   // log resolution on first sent frame
 
     public int width, height;
 
@@ -149,6 +150,14 @@ public class CurrentFrameCapturer : MonoBehaviour
     {
         var ep = endPoint; // snapshot volatile ref
         if (ep == null) return;
+
+        if (!_loggedFirst)
+        {
+            var wc = WebCamTextureAccess.Instance.WebCamTexture;
+            int chunks = (jpg.Length + MaxUdpPacketSize - 1) / MaxUdpPacketSize;
+            Debug.Log($"[CurrentFrameCapturer] First frame: {wc.width}x{wc.height}  JPEG={jpg.Length/1024}KB  chunks={chunks}  →{ep}");
+            _loggedFirst = true;
+        }
 
         if (!no_split)
         {
