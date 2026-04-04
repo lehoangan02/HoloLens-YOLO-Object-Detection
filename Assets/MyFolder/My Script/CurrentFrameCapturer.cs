@@ -13,7 +13,7 @@ public class CurrentFrameCapturer : MonoBehaviour
     private volatile IPEndPoint endPoint;  // volatile — updated from main thread, read by worker
 
     private const int  MaxUdpPacketSize = 1200;
-    private const int  FramePort        = 5010;   // must match FRAME_PORT in controller_app.py
+    private const int  FramePort        = 5016;   // must match FRAME_PORT in controller_app.py
     private const bool no_split         = false;  // chunked UDP
 
     public string targetIP;   // shown in Inspector; overridden by NetworkDiscovery
