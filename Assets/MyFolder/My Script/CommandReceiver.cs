@@ -95,12 +95,18 @@ public class CommandReceiver : MonoBehaviour
     {
         switch (cmd)
         {
-            case "CMD:START_EYE":   eyeTracker?.TurnOn();    break;
-            case "CMD:STOP_EYE":    eyeTracker?.TurnOff();   break;
-            case "CMD:SEND_EYE":    eyeTracker?.SendFile();  break;
-            case "CMD:START_HEAD":  headTracker?.TurnOn();   break;
-            case "CMD:STOP_HEAD":   headTracker?.TurnOff();  break;
-            case "CMD:SEND_HEAD":   headTracker?.SendFile(); break;
+            case "CMD:START_EYE":   eyeTracker?.TurnOn();     break;
+            case "CMD:STOP_EYE":    eyeTracker?.TurnOff();    break;
+            case "CMD:SEND_EYE":    eyeTracker?.SendFile();   break;
+            case "CMD:START_HEAD":  headTracker?.TurnOn();    break;
+            case "CMD:STOP_HEAD":   headTracker?.TurnOff();   break;
+            case "CMD:SEND_HEAD":   headTracker?.SendFile();  break;
+            case "CMD:RESET":
+                eyeTracker?.TurnOff();
+                headTracker?.TurnOff();
+                eyeTracker?.DeleteFile();
+                headTracker?.DeleteFile();
+                break;
             default:
                 Debug.LogWarning($"[CommandReceiver] Unknown command: {cmd}");
                 break;
