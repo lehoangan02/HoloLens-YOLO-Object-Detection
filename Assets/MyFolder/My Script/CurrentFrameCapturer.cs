@@ -154,9 +154,8 @@ public class CurrentFrameCapturer : MonoBehaviour
 
         if (!_loggedFirst)
         {
-            var wc = WebCamTextureAccess.Instance.WebCamTexture;
             int chunks = (jpg.Length + MaxUdpPacketSize - 1) / MaxUdpPacketSize;
-            Debug.Log($"[CurrentFrameCapturer] First frame: {wc.width}x{wc.height}  JPEG={jpg.Length/1024}KB  chunks={chunks}  →{ep}");
+            Debug.Log($"[CurrentFrameCapturer] First frame: {width}x{height}  JPEG={jpg.Length/1024}KB  chunks={chunks}  →{ep}");
             _loggedFirst = true;
         }
 
