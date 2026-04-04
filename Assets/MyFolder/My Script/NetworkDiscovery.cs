@@ -138,7 +138,7 @@ public class NetworkDiscovery : MonoBehaviour
                     // for maximum compatibility across routers
                     sock.SendTo(msg, subnetEP);
                     sock.SendTo(msg, broadcastEP);
-                    Debug.Log($"[NetworkDiscovery] Broadcast HOLOLENS:{_holoLensIP} → {subnetEP.Address} + 255.255.255.255");
+                    //Debug.Log($"[NetworkDiscovery] Broadcast HOLOLENS:{_holoLensIP} → {subnetEP.Address} + 255.255.255.255");
                 }
                 catch (Exception e)
                 {
