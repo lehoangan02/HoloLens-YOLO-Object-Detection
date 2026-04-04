@@ -35,6 +35,13 @@ public class CommandReceiver : MonoBehaviour
 
     private void Start()
     {
+        // Auto-find trackers if not assigned in Inspector
+        if (eyeTracker  == null) eyeTracker  = FindObjectOfType<EyeTracker>();
+        if (headTracker == null) headTracker = FindObjectOfType<HeadTracker>();
+
+        if (eyeTracker  == null) Debug.LogWarning("[CommandReceiver] EyeTracker not found");
+        if (headTracker == null) Debug.LogWarning("[CommandReceiver] HeadTracker not found");
+
         udpClient = new UdpClient(CmdPort);
         udpClient.Client.ReceiveTimeout = 1000; // so the thread can check `running`
         running = true;

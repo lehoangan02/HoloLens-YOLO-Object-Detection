@@ -106,10 +106,20 @@ public class HeadTracker : MonoBehaviour
 
     private async Task SendFileTCPAsync()
     {
+        // Wait up to 5 s for MacIP if not yet discovered
         string targetIP = NetworkDiscovery.Instance?.MacIP;
         if (string.IsNullOrEmpty(targetIP))
         {
-            Debug.LogError("[HeadTracker] Mac IP not yet discovered — cannot send file.");
+            Debug.LogWarning("[HeadTracker] MacIP not yet known — waiting up to 5 s…");
+            for (int i = 0; i < 50 && string.IsNullOrEmpty(targetIP); i++)
+            {
+                await Task.Delay(100);
+                targetIP = NetworkDiscovery.Instance?.MacIP;
+            }
+        }
+        if (string.IsNullOrEmpty(targetIP))
+        {
+            Debug.LogError("[HeadTracker] Mac IP not discovered after 5 s — cannot send file.");
             return;
         }
 
