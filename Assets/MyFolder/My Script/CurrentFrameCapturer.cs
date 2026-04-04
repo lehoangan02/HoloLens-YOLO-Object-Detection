@@ -12,7 +12,7 @@ public class CurrentFrameCapturer : MonoBehaviour
     private UdpClient           udpClient;
     private volatile IPEndPoint endPoint;  // volatile — updated from main thread, read by worker
 
-    private const int  MaxUdpPacketSize = 8192;  // ~7 chunks/frame at 896×504 — stable on WiFi
+    private const int  MaxUdpPacketSize = 1400;  // below WiFi MTU (1472) — no IP fragmentation
     private const int  FramePort        = 5016;   // must match FRAME_PORT in controller_app.py
     private const bool no_split         = false;  // chunked UDP
 
