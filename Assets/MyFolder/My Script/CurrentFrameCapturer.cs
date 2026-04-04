@@ -9,20 +9,17 @@ using UnityEngine;
 
 public class CurrentFrameCapturer : MonoBehaviour
 {
-    private UdpClient      udpClient;
-    private volatile IPEndPoint endPoint;   // volatile — updated from main thread, read by worker
+    private UdpClient           udpClient;
+    private volatile IPEndPoint endPoint;  // volatile — updated from main thread, read by worker
 
-    private TcpClient      tcpClient;
-    private NetworkStream  networkStream;
-    private readonly object _tcpLock = new object();
-
-    private const int MaxUdpPacketSize = 1200;
+    private const int  MaxUdpPacketSize = 1200;
+    private const int  FramePort        = 5010;   // must match FRAME_PORT in controller_app.py
+    private const bool no_split         = false;  // chunked UDP
 
     public string targetIP;   // shown in Inspector; overridden by NetworkDiscovery
-    public int    targetPort;
 
-    [SerializeField] private bool udpEnabled = false;
-    [SerializeField] private bool no_split   = false;
+    // UDP is the only supported mode — TCP frame streaming is not used
+    private const bool udpEnabled = true;
 
     // Thread & queue
     private Thread workerThread;
@@ -86,16 +83,8 @@ public class CurrentFrameCapturer : MonoBehaviour
         {
             _reconnectPending = false;
             targetIP = _pendingIP;
-            Debug.Log($"[CurrentFrameCapturer] Reconnecting to new Mac IP: {targetIP}");
-
-            if (udpEnabled)
-            {
-                endPoint = new IPEndPoint(IPAddress.Parse(targetIP), targetPort);
-            }
-            else
-            {
-                ReconnectTCP();
-            }
+            endPoint = new IPEndPoint(IPAddress.Parse(targetIP), FramePort);
+            Debug.Log($"[CurrentFrameCapturer] Updated UDP target: {targetIP}:{FramePort}");
         }
 
         if (!_initialized) return;
@@ -123,11 +112,6 @@ public class CurrentFrameCapturer : MonoBehaviour
         if (NetworkDiscovery.Instance != null)
             NetworkDiscovery.Instance.OnMacIPChanged -= OnMacIPChanged;
 
-        lock (_tcpLock)
-        {
-            networkStream?.Close();
-            tcpClient?.Close();
-        }
         udpClient?.Close();
     }
 
@@ -143,54 +127,9 @@ public class CurrentFrameCapturer : MonoBehaviour
 
     private void InitNetwork()
     {
-        if (udpEnabled)
-        {
-            udpClient = new UdpClient();
-            endPoint  = new IPEndPoint(IPAddress.Parse(targetIP), targetPort);
-        }
-        else
-        {
-            InitTCP();
-        }
-    }
-
-    private void InitTCP()
-    {
-        lock (_tcpLock)
-        {
-            tcpClient = new TcpClient();
-            try
-            {
-                tcpClient.Connect(targetIP, targetPort);
-                networkStream = tcpClient.GetStream();
-                Debug.Log($"[CurrentFrameCapturer] TCP connected to {targetIP}:{targetPort}");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[CurrentFrameCapturer] TCP connection failed: " + e);
-            }
-        }
-    }
-
-    public void ReconnectTCP()
-    {
-        lock (_tcpLock)
-        {
-            try
-            {
-                networkStream?.Close();
-                tcpClient?.Close();
-
-                tcpClient = new TcpClient();
-                tcpClient.Connect(targetIP, targetPort);
-                networkStream = tcpClient.GetStream();
-                Debug.Log($"[CurrentFrameCapturer] TCP reconnected to {targetIP}:{targetPort}");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[CurrentFrameCapturer] TCP reconnection failed: " + e);
-            }
-        }
+        udpClient = new UdpClient();
+        endPoint  = new IPEndPoint(IPAddress.Parse(targetIP), FramePort);
+        Debug.Log($"[CurrentFrameCapturer] UDP target: {targetIP}:{FramePort}");
     }
 
     // ── Worker loop (background thread) ─────────────────────────────────── //
@@ -200,16 +139,9 @@ public class CurrentFrameCapturer : MonoBehaviour
         while (running)
         {
             if (frameQueue.TryDequeue(out var jpg))
-            {
-                if (udpEnabled)
-                    SendFrameUDP(jpg);
-                else
-                    SendFrameTCP(jpg);
-            }
+                SendFrameUDP(jpg);
             else
-            {
                 Thread.Sleep(5);
-            }
         }
     }
 
@@ -240,22 +172,4 @@ public class CurrentFrameCapturer : MonoBehaviour
         }
     }
 
-    private void SendFrameTCP(byte[] jpg)
-    {
-        lock (_tcpLock)
-        {
-            try
-            {
-                if (networkStream == null) return;
-                byte[] lengthBytes = BitConverter.GetBytes(jpg.Length);
-                networkStream.Write(lengthBytes, 0, lengthBytes.Length);
-                networkStream.Write(jpg, 0, jpg.Length);
-                networkStream.Flush();
-            }
-            catch (Exception)
-            {
-                // Silently drop — reconnect will be triggered by IP change or manual call
-            }
-        }
-    }
 }
