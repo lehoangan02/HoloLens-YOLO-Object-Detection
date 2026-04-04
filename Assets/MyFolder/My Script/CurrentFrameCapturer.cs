@@ -31,8 +31,9 @@ public class CurrentFrameCapturer : MonoBehaviour
     private volatile string _pendingIP        = null;
 
     // Set to true only after Start() coroutine fully completes
-    private bool _initialized  = false;
-    private bool _loggedFirst  = false;   // log resolution on first sent frame
+    private bool   _initialized = false;
+    private bool   _loggedFirst = false;
+    private ushort _frameId     = 0;      // wraps 0–65535, used to detect frame boundaries
 
     public int width, height;
 
@@ -159,25 +160,26 @@ public class CurrentFrameCapturer : MonoBehaviour
             _loggedFirst = true;
         }
 
-        if (!no_split)
-        {
-            int totalPackets = (jpg.Length + MaxUdpPacketSize - 1) / MaxUdpPacketSize;
-            for (int i = 0; i < totalPackets; i++)
-            {
-                int offset = i * MaxUdpPacketSize;
-                int size   = Math.Min(MaxUdpPacketSize, jpg.Length - offset);
+        // Packet header (4 bytes):
+        //   [0–1] frame_id  (big-endian ushort — resets on new frame)
+        //   [2]   chunk_index
+        //   [3]   total_chunks
+        ushort fid = _frameId++;
+        int totalPackets = (jpg.Length + MaxUdpPacketSize - 1) / MaxUdpPacketSize;
 
-                byte[] packet = new byte[size + 2];
-                packet[0] = (byte)i;
-                packet[1] = (byte)totalPackets;
-                Array.Copy(jpg, offset, packet, 2, size);
-
-                udpClient.Send(packet, packet.Length, ep);
-            }
-        }
-        else
+        for (int i = 0; i < totalPackets; i++)
         {
-            udpClient.Send(jpg, jpg.Length, ep);
+            int offset = i * MaxUdpPacketSize;
+            int size   = Math.Min(MaxUdpPacketSize, jpg.Length - offset);
+
+            byte[] packet = new byte[size + 4];
+            packet[0] = (byte)(fid >> 8);
+            packet[1] = (byte)(fid & 0xFF);
+            packet[2] = (byte)i;
+            packet[3] = (byte)totalPackets;
+            Array.Copy(jpg, offset, packet, 4, size);
+
+            udpClient.Send(packet, packet.Length, ep);
         }
     }
 
