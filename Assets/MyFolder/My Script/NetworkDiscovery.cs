@@ -73,29 +73,59 @@ public class NetworkDiscovery : MonoBehaviour
 
     // ── Helpers ─────────────────────────────────────────────────────────── //
 
+    /// <summary>
+    /// Uses the "connect to 8.8.8.8" trick to return the IP of the interface
+    /// that has a default route — reliably picks WiFi over USB/loopback.
+    /// </summary>
     private static string GetLocalIP()
     {
         try
         {
-            var host = Dns.GetHostEntry(Dns.GetHostName());
-            foreach (var ip in host.AddressList)
-                if (ip.AddressFamily == AddressFamily.InterNetwork)
-                    return ip.ToString();
+            using (var s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+            {
+                s.Connect("8.8.8.8", 80);
+                return ((IPEndPoint)s.LocalEndPoint).Address.ToString();
+            }
         }
         catch (Exception e)
         {
-            Debug.LogError("[NetworkDiscovery] GetLocalIP: " + e.Message);
+            Debug.LogError("[NetworkDiscovery] GetLocalIP UDP trick failed: " + e.Message);
         }
+        // Fallback: DNS enumeration
+        try
+        {
+            foreach (var ip in Dns.GetHostEntry(Dns.GetHostName()).AddressList)
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                    return ip.ToString();
+        }
+        catch { }
         return "0.0.0.0";
+    }
+
+    /// <summary>
+    /// Returns the /24 subnet-directed broadcast for the given IP.
+    /// e.g. "10.0.10.7" → "10.0.10.255"
+    /// </summary>
+    private static IPAddress SubnetBroadcast(string localIP)
+    {
+        try
+        {
+            var parts = localIP.Split('.');
+            if (parts.Length == 4)
+                return IPAddress.Parse($"{parts[0]}.{parts[1]}.{parts[2]}.255");
+        }
+        catch { }
+        return IPAddress.Broadcast;
     }
 
     // ── Broadcast thread — announces HoloLens IP to Mac ─────────────────── //
 
     private void BroadcastLoop()
     {
-        var   startTime = DateTime.UtcNow;
-        byte[] msg      = Encoding.UTF8.GetBytes($"HOLOLENS:{_holoLensIP}");
-        var   ep        = new IPEndPoint(IPAddress.Broadcast, HoloLensBroadcastPort);
+        var   startTime  = DateTime.UtcNow;
+        byte[] msg       = Encoding.UTF8.GetBytes($"HOLOLENS:{_holoLensIP}");
+        var   subnetEP   = new IPEndPoint(SubnetBroadcast(_holoLensIP), HoloLensBroadcastPort);
+        var   broadcastEP = new IPEndPoint(IPAddress.Broadcast, HoloLensBroadcastPort);
 
         using (var sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
         {
@@ -104,8 +134,11 @@ public class NetworkDiscovery : MonoBehaviour
             {
                 try
                 {
-                    sock.SendTo(msg, ep);
-                    Debug.Log($"[NetworkDiscovery] Broadcast HOLOLENS:{_holoLensIP}");
+                    // Send to both 255.255.255.255 and subnet-directed broadcast
+                    // for maximum compatibility across routers
+                    sock.SendTo(msg, subnetEP);
+                    sock.SendTo(msg, broadcastEP);
+                    Debug.Log($"[NetworkDiscovery] Broadcast HOLOLENS:{_holoLensIP} → {subnetEP.Address} + 255.255.255.255");
                 }
                 catch (Exception e)
                 {
