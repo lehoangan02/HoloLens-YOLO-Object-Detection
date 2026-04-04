@@ -9,7 +9,7 @@ public class UDPClient : MonoBehaviour
     UdpClient udpClient;
     Thread receiveThread;
 
-    public string pythonIP;  // Python machine IP
+    public string pythonIP;   // populated by NetworkDiscovery
     public int pythonPort;
     public int unityPort;
 
@@ -17,16 +17,33 @@ public class UDPClient : MonoBehaviour
 
     void Start()
     {
-        pythonIP = "10.0.10.203";
         pythonPort = 5007;
-        unityPort = 5008;
-        Debug.Log($"Starting UDP Client - Unity Port: {unityPort}, Python IP: {pythonIP}, Python Port: {pythonPort}");
+        unityPort  = 5008;
+
         udpClient = new UdpClient(unityPort);
-        receiveThread = new Thread(new ThreadStart(ReceiveData));
-        receiveThread.IsBackground = true;
+        receiveThread = new Thread(new ThreadStart(ReceiveData)) { IsBackground = true };
         receiveThread.Start();
-        Debug.Log("UDP Client started and listening for messages...");
+        Debug.Log($"[UDPClient] Listening on port {unityPort}, waiting for Mac IP...");
+
+        // Subscribe to discovery; apply immediately if already known
+        if (NetworkDiscovery.Instance != null)
+        {
+            NetworkDiscovery.Instance.OnMacIPChanged += OnMacIPChanged;
+            if (NetworkDiscovery.Instance.MacIP != null)
+                OnMacIPChanged(NetworkDiscovery.Instance.MacIP);
+        }
+        else
+        {
+            Debug.LogWarning("[UDPClient] NetworkDiscovery not found — pythonIP must be set manually.");
+        }
     }
+
+    private void OnMacIPChanged(string ip)
+    {
+        pythonIP = ip;
+        Debug.Log($"[UDPClient] Mac IP updated: {pythonIP}");
+    }
+
     public string LogIPAddress()
     {
         string localIP = string.Empty;
@@ -68,27 +85,19 @@ public class UDPClient : MonoBehaviour
         }
     }
 
-    void Update()
-    {
-        // if (Input.GetKeyDown(KeyCode.Space))
-        // {
-        //     Debug.Log("Space key pressed! Sending message to Python...");
-        //     SendToPython(LogIPAddress());
-        // }
-        // if (Input.GetKeyDown(KeyCode.A))
-        // {
-        //     Debug.Log("Printing IP\n");
-        //     LogIPAddress();
-
-        // }
-    }
+    void Update() { }
 
     void SendToPython(string message)
     {
+        if (string.IsNullOrEmpty(pythonIP))
+        {
+            Debug.LogWarning("[UDPClient] Mac IP not yet known — cannot send.");
+            return;
+        }
         try
         {
-            Debug.Log($"Attempting to send to Python at {pythonIP}:{pythonPort}");
-            UdpClient sender = new UdpClient(); // Let system assign a random port
+            Debug.Log($"[UDPClient] Sending to {pythonIP}:{pythonPort}");
+            UdpClient sender = new UdpClient();
             byte[] data = Encoding.UTF8.GetBytes(message);
             sender.Send(data, data.Length, pythonIP, pythonPort);
             sender.Close();
@@ -103,8 +112,11 @@ public class UDPClient : MonoBehaviour
     private void OnApplicationQuit()
     {
         if (receiveThread != null) receiveThread.Abort();
-        if (udpClient != null) udpClient.Close();
+        if (udpClient    != null) udpClient.Close();
+        if (NetworkDiscovery.Instance != null)
+            NetworkDiscovery.Instance.OnMacIPChanged -= OnMacIPChanged;
     }
+
     private int i = 0;
     public void SendToPythonAndScreamMessage(string message)
     {

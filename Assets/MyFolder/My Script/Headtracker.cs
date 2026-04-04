@@ -1,19 +1,21 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
-using System.Threading.Tasks; 
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class HeadTracker : MonoBehaviour
 {
-    public Camera mainCamera;                   // XR Rig Main Camera
-    public GameObject objectOfInterest;         // Object to track
-    public GameObject hitPointDisplayPrefab;    // Prefab for visualization
-    public float maxHeadDistance = 3.0f;        // Max ray length
+    public Camera     mainCamera;
+    public GameObject objectOfInterest;
+    public GameObject hitPointDisplayPrefab;
+    public float      maxHeadDistance = 3.0f;
 
-    private GameObject hitPointDisplayer;
+    private GameObject   hitPointDisplayer;
     private StreamWriter trackerData;
-    private bool isTrackingEnabled = false;     // Flag to enable/disable tracking
+    private bool         isTrackingEnabled = false;
+
+    public int port = 5013;
 
     private void Awake()
     {
@@ -25,7 +27,7 @@ public class HeadTracker : MonoBehaviour
     private void Start()
     {
         hitPointDisplayer = Instantiate(hitPointDisplayPrefab);
-        hitPointDisplayer.SetActive(false); // Initially disabled
+        hitPointDisplayer.SetActive(false);
     }
 
     private void Update()
@@ -64,99 +66,68 @@ public class HeadTracker : MonoBehaviour
 
     private void OnDestroy()
     {
-        trackerData.Close();
+        trackerData?.Close();
     }
 
     public void TurnOn()
     {
         if (isTrackingEnabled) return;
-
         isTrackingEnabled = true;
-        if (hitPointDisplayer != null)
-        {
-            hitPointDisplayer.SetActive(true);
-        }
+        hitPointDisplayer?.SetActive(true);
     }
 
     public void TurnOff()
     {
         if (!isTrackingEnabled) return;
-
         isTrackingEnabled = false;
-        if (hitPointDisplayer != null)
-        {
-            hitPointDisplayer.SetActive(false);
-        }
-    }
-
-    public string targetIP = "192.168.1.8";
-    public int port = 5013;
-
-    private void SendFileTCP()
-    {
-        string filePath = Path.Combine(Application.persistentDataPath, "headtracking.csv");
-        using (TcpClient client = new TcpClient(targetIP, port))
-        using (NetworkStream stream = client.GetStream())
-        using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-        {
-            Debug.Log("Sending file...");
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                stream.Write(buffer, 0, bytesRead);
-            }
-            Console.WriteLine("File sent.");
-        }
-    }
-    private async Task SendFileTCPAsync()
-    {
-        string filePath = Path.Combine(Application.persistentDataPath, "headtracking.csv");
-        try
-        {
-            using (TcpClient client = new TcpClient())
-            {
-                await client.ConnectAsync(targetIP, port); // Asynchronous connection
-                using (NetworkStream stream = client.GetStream())
-                using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-                {
-                    Debug.Log("Sending file...");
-                    byte[] buffer = new byte[4096];
-                    int bytesRead;
-                    while ((bytesRead = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0) // Asynchronous read
-                    {
-                        await stream.WriteAsync(buffer, 0, bytesRead); // Asynchronous write
-                    }
-                    Debug.Log("File sent.");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"Failed to send file: {ex.Message}");
-        }
+        hitPointDisplayer?.SetActive(false);
     }
 
     public async void SendFile()
     {
         trackerData.Close();
-
         try
         {
-            await SendFileTCPAsync();  // may throw
+            await SendFileTCPAsync();
         }
         catch (Exception ex)
         {
-            Debug.LogError($"Failed to send file: {ex.Message}");
+            Debug.LogError($"[HeadTracker] Failed to send file: {ex.Message}");
         }
         finally
         {
-            // Always reopen trackerData so logging continues
             var trackerDataPath = Path.Combine(Application.persistentDataPath, "headtracking.csv");
             trackerData = new StreamWriter(trackerDataPath, append: true);
             trackerData.AutoFlush = true;
         }
     }
+
+    private async Task SendFileTCPAsync()
+    {
+        string targetIP = NetworkDiscovery.Instance?.MacIP;
+        if (string.IsNullOrEmpty(targetIP))
+        {
+            Debug.LogError("[HeadTracker] Mac IP not yet discovered — cannot send file.");
+            return;
+        }
+
+        string filePath = Path.Combine(Application.persistentDataPath, "headtracking.csv");
+        using (TcpClient client = new TcpClient())
+        {
+            await client.ConnectAsync(targetIP, port);
+            using (NetworkStream stream = client.GetStream())
+            using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            {
+                Debug.Log($"[HeadTracker] Sending file to {targetIP}:{port}...");
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                    await stream.WriteAsync(buffer, 0, bytesRead);
+                Debug.Log("[HeadTracker] File sent.");
+            }
+        }
+    }
+
     public void DeleteFile()
     {
         trackerData.Close();
@@ -166,20 +137,19 @@ public class HeadTracker : MonoBehaviour
             if (File.Exists(filePath))
             {
                 File.Delete(filePath);
-                Debug.Log("File deleted.");
+                Debug.Log("[HeadTracker] File deleted.");
             }
             else
             {
-                Debug.LogWarning("File not found for deletion.");
+                Debug.LogWarning("[HeadTracker] File not found for deletion.");
             }
         }
         catch (Exception ex)
         {
-            Debug.LogError($"Failed to delete file: {ex.Message}");
+            Debug.LogError($"[HeadTracker] Failed to delete file: {ex.Message}");
         }
         finally
         {
-            // Always reopen trackerData so logging continues
             var trackerDataPath = Path.Combine(Application.persistentDataPath, "headtracking.csv");
             trackerData = new StreamWriter(trackerDataPath, append: true);
             trackerData.AutoFlush = true;

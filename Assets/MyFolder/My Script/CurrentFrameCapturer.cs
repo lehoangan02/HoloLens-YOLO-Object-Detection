@@ -1,7 +1,7 @@
 using Assets.Scripts;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -9,71 +9,177 @@ using UnityEngine;
 
 public class CurrentFrameCapturer : MonoBehaviour
 {
-    private UdpClient udpClient;
-    private IPEndPoint endPoint;
+    private UdpClient      udpClient;
+    private volatile IPEndPoint endPoint;   // volatile — updated from main thread, read by worker
 
-    private TcpClient tcpClient;
-    private NetworkStream networkStream;
+    private TcpClient      tcpClient;
+    private NetworkStream  networkStream;
+    private readonly object _tcpLock = new object();
 
     private const int MaxUdpPacketSize = 1200;
 
-    public string targetIP;
-    public int targetPort;
+    public string targetIP;   // shown in Inspector; overridden by NetworkDiscovery
+    public int    targetPort;
 
-    [SerializeField]
-    private bool udpEnabled = false;
-    [SerializeField]
-    private bool no_split = false;
+    [SerializeField] private bool udpEnabled = false;
+    [SerializeField] private bool no_split   = false;
 
     // Thread & queue
     private Thread workerThread;
     private ConcurrentQueue<byte[]> frameQueue = new ConcurrentQueue<byte[]>();
     private bool running = false;
 
+    // Pending IP change (set from background event, applied on main thread)
+    private volatile bool   _reconnectPending = false;
+    private volatile string _pendingIP        = null;
 
     public int width, height;
 
-    private void Start()
+    // ── Unity lifecycle ──────────────────────────────────────────────────── //
+
+    private IEnumerator Start()
     {
-        if (udpEnabled)
+        // Wait until NetworkDiscovery has found the Mac IP
+        if (NetworkDiscovery.Instance != null)
         {
-            udpClient = new UdpClient();
-            endPoint = new IPEndPoint(IPAddress.Parse(targetIP), targetPort);
+            NetworkDiscovery.Instance.OnMacIPChanged += OnMacIPChanged;
+
+            if (NetworkDiscovery.Instance.MacIP == null)
+            {
+                Debug.Log("[CurrentFrameCapturer] Waiting for Mac IP from NetworkDiscovery...");
+                yield return new WaitUntil(() => NetworkDiscovery.Instance.MacIP != null);
+            }
+            targetIP = NetworkDiscovery.Instance.MacIP;
+            Debug.Log($"[CurrentFrameCapturer] Using Mac IP: {targetIP}");
         }
         else
         {
-            initTCP();
+            Debug.LogWarning("[CurrentFrameCapturer] NetworkDiscovery not found — using Inspector targetIP.");
         }
 
+        InitNetwork();
+
         WebCamTextureAccess.Instance.Play();
-        width = WebCamTextureAccess.Instance.WebCamTexture.width;
+        width  = WebCamTextureAccess.Instance.WebCamTexture.width;
         height = WebCamTextureAccess.Instance.WebCamTexture.height;
+        Debug.Log($"[CurrentFrameCapturer] Webcam: {width}x{height}");
 
-        Debug.Log($"Webcam image size: {width}x{height}");
-
-        running = true;
-        workerThread = new Thread(WorkerLoop);
-        workerThread.IsBackground = true;
+        running      = true;
+        workerThread = new Thread(WorkerLoop) { IsBackground = true };
         workerThread.Start();
     }
 
     private void Update()
     {
+        // Apply any IP change that arrived from the background thread
+        if (_reconnectPending)
+        {
+            _reconnectPending = false;
+            targetIP = _pendingIP;
+            Debug.Log($"[CurrentFrameCapturer] Reconnecting to new Mac IP: {targetIP}");
+
+            if (udpEnabled)
+            {
+                endPoint = new IPEndPoint(IPAddress.Parse(targetIP), targetPort);
+            }
+            else
+            {
+                ReconnectTCP();
+            }
+        }
+
         if (WebCamTextureAccess.Instance.WebCamTexture.isPlaying)
         {
-            // Grab pixels (main thread)
             var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
             tex.SetPixels32(WebCamTextureAccess.Instance.WebCamTexture.GetPixels32());
             tex.Apply();
 
-            // Encode to JPG (still main thread, must be)
             byte[] jpg = tex.EncodeToJPG(50);
             Destroy(tex);
 
-            // Queue JPG for background sending
             frameQueue.Enqueue(jpg);
         }
     }
+
+    private void OnDestroy()
+    {
+        running = false;
+        workerThread?.Join();
+
+        if (NetworkDiscovery.Instance != null)
+            NetworkDiscovery.Instance.OnMacIPChanged -= OnMacIPChanged;
+
+        lock (_tcpLock)
+        {
+            networkStream?.Close();
+            tcpClient?.Close();
+        }
+        udpClient?.Close();
+    }
+
+    // ── NetworkDiscovery callback (background thread) ────────────────────── //
+
+    private void OnMacIPChanged(string ip)
+    {
+        _pendingIP        = ip;
+        _reconnectPending = true;  // handled safely in Update()
+    }
+
+    // ── Network init ─────────────────────────────────────────────────────── //
+
+    private void InitNetwork()
+    {
+        if (udpEnabled)
+        {
+            udpClient = new UdpClient();
+            endPoint  = new IPEndPoint(IPAddress.Parse(targetIP), targetPort);
+        }
+        else
+        {
+            InitTCP();
+        }
+    }
+
+    private void InitTCP()
+    {
+        lock (_tcpLock)
+        {
+            tcpClient = new TcpClient();
+            try
+            {
+                tcpClient.Connect(targetIP, targetPort);
+                networkStream = tcpClient.GetStream();
+                Debug.Log($"[CurrentFrameCapturer] TCP connected to {targetIP}:{targetPort}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[CurrentFrameCapturer] TCP connection failed: " + e);
+            }
+        }
+    }
+
+    public void ReconnectTCP()
+    {
+        lock (_tcpLock)
+        {
+            try
+            {
+                networkStream?.Close();
+                tcpClient?.Close();
+
+                tcpClient = new TcpClient();
+                tcpClient.Connect(targetIP, targetPort);
+                networkStream = tcpClient.GetStream();
+                Debug.Log($"[CurrentFrameCapturer] TCP reconnected to {targetIP}:{targetPort}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[CurrentFrameCapturer] TCP reconnection failed: " + e);
+            }
+        }
+    }
+
+    // ── Worker loop (background thread) ─────────────────────────────────── //
 
     private void WorkerLoop()
     {
@@ -93,249 +199,49 @@ public class CurrentFrameCapturer : MonoBehaviour
         }
     }
 
-
     private void SendFrameUDP(byte[] jpg)
     {
-        if (no_split == false)
+        var ep = endPoint; // snapshot volatile ref
+        if (ep == null) return;
+
+        if (!no_split)
         {
             int totalPackets = (jpg.Length + MaxUdpPacketSize - 1) / MaxUdpPacketSize;
             for (int i = 0; i < totalPackets; i++)
             {
                 int offset = i * MaxUdpPacketSize;
-                int size = Math.Min(MaxUdpPacketSize, jpg.Length - offset);
+                int size   = Math.Min(MaxUdpPacketSize, jpg.Length - offset);
 
                 byte[] packet = new byte[size + 2];
                 packet[0] = (byte)i;
                 packet[1] = (byte)totalPackets;
                 Array.Copy(jpg, offset, packet, 2, size);
 
-                udpClient.Send(packet, packet.Length, endPoint);
+                udpClient.Send(packet, packet.Length, ep);
             }
         }
         else
         {
-            // send in one go (or chunk if > max UDP size)
-            udpClient.Send(jpg, jpg.Length, endPoint);
+            udpClient.Send(jpg, jpg.Length, ep);
         }
     }
 
     private void SendFrameTCP(byte[] jpg)
     {
-        try
+        lock (_tcpLock)
         {
-            byte[] lengthBytes = BitConverter.GetBytes(jpg.Length);
-            networkStream.Write(lengthBytes, 0, lengthBytes.Length);
-            networkStream.Write(jpg, 0, jpg.Length);
-            networkStream.Flush();
-        }
-        catch (Exception e)
-        {
-            //Debug.LogError("Send failed: " + e);
-        }
-    }
-
-    private void initTCP()
-    {
-        tcpClient = new TcpClient();
-        try
-        {
-            tcpClient.Connect(targetIP, targetPort);
-            networkStream = tcpClient.GetStream();
-            Debug.Log("TCP connected to " + targetIP + ":" + targetPort);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("TCP connection failed: " + e);
+            try
+            {
+                if (networkStream == null) return;
+                byte[] lengthBytes = BitConverter.GetBytes(jpg.Length);
+                networkStream.Write(lengthBytes, 0, lengthBytes.Length);
+                networkStream.Write(jpg, 0, jpg.Length);
+                networkStream.Flush();
+            }
+            catch (Exception)
+            {
+                // Silently drop — reconnect will be triggered by IP change or manual call
+            }
         }
     }
-
-    private void OnDestroy()
-    {
-        running = false;
-        workerThread?.Join();
-
-        if (udpClient != null)
-        {
-            udpClient.Close();
-            udpClient = null;
-        }
-        if (tcpClient != null)
-        {
-            tcpClient.Close();
-            tcpClient = null;
-        }
-        if (networkStream != null)
-        {
-            networkStream.Close();
-            networkStream = null;
-        }
-    }
-    public void ReconnectTCP()
-    {
-        try
-        {
-            networkStream?.Close();
-            tcpClient?.Close();
-
-            tcpClient = new TcpClient();
-            tcpClient.Connect(targetIP, targetPort);
-            networkStream = tcpClient.GetStream();
-
-            Debug.Log("TCP reconnected to " + targetIP + ":" + targetPort);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("TCP reconnection failed: " + e);
-        }
-    }
-
 }
-
-//using Assets.Scripts;
-//using System;
-//using System.Collections.Concurrent;
-//using System.IO;
-//using System.Net;
-//using System.Net.Sockets;
-//using System.Threading;
-//using System.Threading.Tasks;
-//using UnityEngine;
-
-//public class CurrentFrameCapturer : MonoBehaviour
-//{
-//    private UdpClient udpClient;
-//    private IPEndPoint endPoint;
-
-//    private TcpClient tcpClient;
-//    private NetworkStream networkStream;
-
-//    private const int MaxUdpPacketSize = 1200;
-
-//    public Screamer screamer;
-//    public string targetIP;
-//    public int targetPort;
-
-//    [SerializeField]
-//    private bool udpEnabled = false;
-
-//    private ConcurrentQueue<byte[]> frameQueue = new ConcurrentQueue<byte[]>();
-//    private CancellationTokenSource cts;
-
-//    private int width, height;
-
-//    private async void Start()
-//    {
-//        if (udpEnabled)
-//        {
-//            udpClient = new UdpClient();
-//            endPoint = new IPEndPoint(IPAddress.Parse(targetIP), targetPort);
-//        }
-//        else
-//        {
-//            await InitTCP();
-//        }
-
-//        WebCamTextureAccess.Instance.Play();
-//        width = WebCamTextureAccess.Instance.WebCamTexture.width;
-//        height = WebCamTextureAccess.Instance.WebCamTexture.height;
-
-//        Debug.Log($"Webcam image size: {width}x{height}");
-//        screamer.ScreamToDialog("Webcam image size: " + width + "x" + height);
-
-//        cts = new CancellationTokenSource();
-//        _ = WorkerLoopAsync(cts.Token); // fire async worker
-//    }
-
-//    private void Update()
-//    {
-//        if (WebCamTextureAccess.Instance.WebCamTexture.isPlaying)
-//        {
-//            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-//            tex.SetPixels32(WebCamTextureAccess.Instance.WebCamTexture.GetPixels32());
-//            tex.Apply();
-
-//            byte[] jpg = tex.EncodeToJPG(50);
-//            Destroy(tex);
-
-//            frameQueue.Enqueue(jpg);
-//        }
-//    }
-
-//    private async Task WorkerLoopAsync(CancellationToken token)
-//    {
-//        try
-//        {
-//            while (!token.IsCancellationRequested)
-//            {
-//                if (frameQueue.TryDequeue(out var jpg))
-//                {
-//                    if (udpEnabled)
-//                        await SendFrameUDPAsync(jpg);
-//                    else
-//                        await SendFrameTCPAsync(jpg);
-//                }
-//                else
-//                {
-//                    await Task.Delay(5, token);
-//                }
-//            }
-//        }
-//        catch (OperationCanceledException) { }
-//    }
-
-//    private async Task SendFrameUDPAsync(byte[] jpg)
-//    {
-//        int totalPackets = (jpg.Length + MaxUdpPacketSize - 1) / MaxUdpPacketSize;
-//        for (int i = 0; i < totalPackets; i++)
-//        {
-//            int offset = i * MaxUdpPacketSize;
-//            int size = Math.Min(MaxUdpPacketSize, jpg.Length - offset);
-
-//            byte[] packet = new byte[size + 2];
-//            packet[0] = (byte)i;
-//            packet[1] = (byte)totalPackets;
-//            Array.Copy(jpg, offset, packet, 2, size);
-
-//            await udpClient.SendAsync(packet, packet.Length, endPoint);
-//        }
-//    }
-
-//    private async Task SendFrameTCPAsync(byte[] jpg)
-//    {
-//        try
-//        {
-//            byte[] lengthBytes = BitConverter.GetBytes(jpg.Length);
-//            await networkStream.WriteAsync(lengthBytes, 0, lengthBytes.Length);
-//            await networkStream.WriteAsync(jpg, 0, jpg.Length);
-//            await networkStream.FlushAsync();
-//        }
-//        catch (Exception e)
-//        {
-//            Debug.Log("Send failed: " + e);
-//        }
-//    }
-
-//    private async Task InitTCP()
-//    {
-//        tcpClient = new TcpClient();
-//        try
-//        {
-//            await tcpClient.ConnectAsync(targetIP, targetPort);
-//            networkStream = tcpClient.GetStream();
-//            Debug.Log("TCP connected to " + targetIP + ":" + targetPort);
-//        }
-//        catch (Exception e)
-//        {
-//            Debug.LogError("TCP connection failed: " + e);
-//        }
-//    }
-
-//    private void OnDestroy()
-//    {
-//        cts?.Cancel();
-
-//        udpClient?.Close();
-//        networkStream?.Close();
-//        tcpClient?.Close();
-//    }
-//}
