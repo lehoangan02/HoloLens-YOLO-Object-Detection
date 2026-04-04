@@ -53,11 +53,13 @@ public class HeadTracker : MonoBehaviour
 
         if (!Physics.Raycast(ray, out var hit)) return;
 
+        // Only act when head ray hits the target object (or any object if none specified)
+        if (objectOfInterest != null && hit.collider.gameObject != objectOfInterest) return;
+
         if (hitPointDisplayer != null)
             hitPointDisplayer.transform.position = hit.point;
 
-        if (objectOfInterest == null || hit.collider.gameObject == objectOfInterest)
-            WriteTrackingPoint(hit.point);
+        WriteTrackingPoint(hit.point);
     }
 
     private void WriteTrackingPoint(Vector3 hitPoint)
