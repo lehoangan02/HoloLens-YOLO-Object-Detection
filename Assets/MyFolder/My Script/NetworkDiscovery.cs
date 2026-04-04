@@ -123,16 +123,18 @@ public class NetworkDiscovery : MonoBehaviour
 
     private void ListenLoop()
     {
+        Debug.Log("[NetworkDiscovery] ListenLoop thread started");
         try
         {
-            // EnableBroadcast is required on some platforms (Windows/HoloLens) to RECEIVE broadcasts
-            using (var udp = new UdpClient(MacListenPort))
+            // Set ReuseAddress BEFORE binding (required on Windows)
+            using (var udp = new UdpClient())
             {
-                udp.EnableBroadcast = true;
                 udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                udp.Client.ReceiveTimeout = 1000; // 1 s so we can check _running
+                udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
+                udp.Client.Bind(new IPEndPoint(IPAddress.Any, MacListenPort));
+                udp.Client.ReceiveTimeout = 1000;
 
-                Debug.Log($"[NetworkDiscovery] Listening for Mac IP on port {MacListenPort}...");
+                Debug.Log($"[NetworkDiscovery] Socket bound — listening on port {MacListenPort}");
 
                 var remoteEP = new IPEndPoint(IPAddress.Any, 0);
                 while (_running)
@@ -140,7 +142,9 @@ public class NetworkDiscovery : MonoBehaviour
                     try
                     {
                         byte[] data = udp.Receive(ref remoteEP);
+                        Debug.Log($"[NetworkDiscovery] Packet from {remoteEP}: {data.Length} bytes");
                         string text = Encoding.UTF8.GetString(data).Trim();
+                        Debug.Log($"[NetworkDiscovery] Message: '{text}'");
                         if (text.StartsWith("MAC:"))
                         {
                             string ip = text.Substring(4);
@@ -152,18 +156,24 @@ public class NetworkDiscovery : MonoBehaviour
                             }
                         }
                     }
-                    catch (SocketException) { }  // receive timeout — expected, loop again
+                    catch (SocketException se)
+                    {
+                        // TimedOut (10060) is expected every 1 s — log anything else
+                        if (se.SocketErrorCode != SocketError.TimedOut)
+                            Debug.LogWarning($"[NetworkDiscovery] SocketException: {se.SocketErrorCode} — {se.Message}");
+                    }
                     catch (Exception e)
                     {
                         if (_running)
-                            Debug.LogError($"[NetworkDiscovery] Listen error: {e.Message}");
+                            Debug.LogError($"[NetworkDiscovery] Listen error: {e.GetType().Name} — {e.Message}");
                     }
                 }
             }
         }
         catch (Exception e)
         {
-            Debug.LogError($"[NetworkDiscovery] Cannot open listen socket on port {MacListenPort}: {e.Message}");
+            Debug.LogError($"[NetworkDiscovery] Cannot bind port {MacListenPort}: {e.GetType().Name} — {e.Message}");
         }
+        Debug.Log("[NetworkDiscovery] ListenLoop thread ended");
     }
 }
