@@ -135,19 +135,25 @@ namespace Assets.Scripts
                 .Where(item => item.IsInCameraView && item.TimesSeen >= Parameters.MinTimesSeen)
                 .ToList();
 
-            // Group by food type and only take one (e.g., most confident) per type
-            var uniqueFoodItems = visibleItems
-                .GroupBy(item => item.YoloItem.MostLikelyClassFood)
-                .Select(group => group.OrderByDescending(i => i.YoloItem.Confidence).First())
-                .ToList();
+            // Pick only the single most confident food item across all types
+            DisplayedItem winner = visibleItems
+                .Where(item => item.YoloItem.MostLikelyClassFood != null)
+                .OrderByDescending(i => i.YoloItem.Confidence)
+                .FirstOrDefault();
 
-            foreach (DisplayedItem item in uniqueFoodItems)
+            // Show winner's label; destroy any stale markers from other items
+            foreach (DisplayedItem item in this.yoloItems)
             {
-                // Show marker (only one per food type)
-                this.ManageTrackingMarkerFood(item);
-
-                // Show debug information
-                yoloDebugOutput.ShowDebugInformationForItem(item);
+                if (item == winner)
+                {
+                    this.ManageTrackingMarkerFood(item);
+                    yoloDebugOutput.ShowDebugInformationForItem(item);
+                }
+                else if (item.TrackingMarker != null)
+                {
+                    Destroy(item.TrackingMarker);
+                    item.TrackingMarker = null;
+                }
             }
         }
 

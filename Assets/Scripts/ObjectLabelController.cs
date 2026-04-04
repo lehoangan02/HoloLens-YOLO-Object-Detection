@@ -23,6 +23,10 @@ namespace Assets.Scripts
         /// </summary>
         public TextMeshPro TextMesh;
 
+        private Vector3 targetPosition;
+        private bool positionInitialized;
+        private const float LerpSpeed = 8f;
+
         /// <summary>
         ///     Sets the display text.
         /// </summary>
@@ -31,16 +35,30 @@ namespace Assets.Scripts
             set => this.TextMesh.text = value;
             get => this.TextMesh.text;
         }
-        
+
+        private void Update()
+        {
+            if (positionInitialized && transform.position != targetPosition)
+            {
+                transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime * LerpSpeed);
+                this.LineRenderer.SetPosition(0, this.ContentParent.transform.position);
+                this.LineRenderer.SetPosition(1, this.transform.position);
+            }
+        }
+
         /// <summary>
-        ///     Updates the position of the object label.
+        ///     Updates the target position; the label smoothly interpolates towards it.
         /// </summary>
         /// <param name="newPosition">New position of the object.</param>
         public void UpdatePosition(Vector3 newPosition)
         {
-            this.transform.position = newPosition;
+            targetPosition = newPosition;
+            if (!positionInitialized)
+            {
+                this.transform.position = newPosition;
+                positionInitialized = true;
+            }
 
-            // update line between text and center of object
             this.LineRenderer.SetPosition(0, this.ContentParent.transform.position);
             this.LineRenderer.SetPosition(1, this.transform.position);
         }

@@ -1,70 +1,55 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using Microsoft.MixedReality.GraphicsTools;
 
-
 public class NutritionLabelController : MonoBehaviour
 {
-    [SerializeField]
-    private LineRenderer lineRenderer;
-    [SerializeField]
-    private GameObject objectCenter;
-    [SerializeField]
-    private TextMeshProUGUI foodNameTextMeshPro;
-    [SerializeField]
-    private TextMeshProUGUI servingTextMeshPro;
-    [SerializeField]
-    private TextMeshProUGUI caloriesTextMeshPro;
-    [SerializeField]
-    private TextMeshProUGUI fatTextMeshPro;
-    [SerializeField]
-    private TextMeshProUGUI saturatesTextMeshPro;
-    [SerializeField]
-    private TextMeshProUGUI sugarTextMeshPro;
-    [SerializeField]
-    private TextMeshProUGUI saltTextMeshPro;
-    [SerializeField]
-    private Material materialRed;
-    [SerializeField]
-    private Material materialGreen;
-    [SerializeField]
-    private Material materialYellow;
-    [SerializeField]
-    private CanvasElementRoundedRect canvasElementRoundedRectCalories;
-    [SerializeField]
-    private CanvasElementRoundedRect canvasElementRoundedRectFat;
-    [SerializeField]
-    private CanvasElementRoundedRect canvasElementRoundedRectSaturates;
-    [SerializeField]
-    private CanvasElementRoundedRect canvasElementRoundedRectSugar;
-    [SerializeField]
-    private CanvasElementRoundedRect canvasElementRoundedRectSalt;
+    [SerializeField] private LineRenderer lineRenderer;
+    [SerializeField] private GameObject objectCenter;
+    [SerializeField] private TextMeshProUGUI foodNameTextMeshPro;
+    [SerializeField] private TextMeshProUGUI servingTextMeshPro;
+    [SerializeField] private TextMeshProUGUI caloriesTextMeshPro;
+    [SerializeField] private TextMeshProUGUI fatTextMeshPro;
+    [SerializeField] private TextMeshProUGUI saturatesTextMeshPro;
+    [SerializeField] private TextMeshProUGUI sugarTextMeshPro;
+    [SerializeField] private TextMeshProUGUI saltTextMeshPro;
+    [SerializeField] private Material materialRed;
+    [SerializeField] private Material materialGreen;
+    [SerializeField] private Material materialYellow;
+    [SerializeField] private CanvasElementRoundedRect canvasElementRoundedRectCalories;
+    [SerializeField] private CanvasElementRoundedRect canvasElementRoundedRectFat;
+    [SerializeField] private CanvasElementRoundedRect canvasElementRoundedRectSaturates;
+    [SerializeField] private CanvasElementRoundedRect canvasElementRoundedRectSugar;
+    [SerializeField] private CanvasElementRoundedRect canvasElementRoundedRectSalt;
 
-    enum NutrientLevel
-    {
-        BAD,
-        CONCERNING,
-        RESONABLE
-    }
+    private Vector3 targetPosition;
+    private bool positionInitialized;
+    private const float LerpSpeed = 8f;
 
-    void Start()
-    {
-        
-    }
+    enum NutrientLevel { BAD, CONCERNING, RESONABLE }
 
-    // Update is called once per frame
     void Update()
     {
-        
+        if (positionInitialized && transform.position != targetPosition)
+        {
+            transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime * LerpSpeed);
+            lineRenderer.SetPosition(0, objectCenter.transform.position);
+            lineRenderer.SetPosition(1, transform.position);
+        }
     }
+
     public void UpdatePosition(Vector3 newPosition)
     {
-        this.transform.position = newPosition;
-        this.lineRenderer.SetPosition(0, this.objectCenter.transform.position);
-        this.lineRenderer.SetPosition(1, this.transform.position);
+        targetPosition = newPosition;
+        if (!positionInitialized)
+        {
+            transform.position = newPosition;
+            positionInitialized = true;
+        }
+        lineRenderer.SetPosition(0, objectCenter.transform.position);
+        lineRenderer.SetPosition(1, transform.position);
     }
+
     public void SetInfo(FoodItem foodItem)
     {
         foodNameTextMeshPro.text = foodItem.Name;
@@ -74,142 +59,47 @@ public class NutritionLabelController : MonoBehaviour
         saturatesTextMeshPro.text = foodItem.Nutrition.Saturates.ToString() + "g";
         sugarTextMeshPro.text = foodItem.Nutrition.Sugar.ToString() + "g";
         saltTextMeshPro.text = foodItem.Nutrition.Salt.ToString() + "g";
-        // Set color based on nutriscore
-        if (GetNutriScoreColor("Calories", foodItem.Nutrition.Calories, foodItem.ServingType) == NutrientLevel.RESONABLE)
-        {
-            canvasElementRoundedRectCalories.material = materialGreen;
-        }
-        else if (GetNutriScoreColor("Calories", foodItem.Nutrition.Calories, foodItem.ServingType) == NutrientLevel.CONCERNING)
-        {
-            canvasElementRoundedRectCalories.material = materialYellow;
-        }
-        else
-        {
-            canvasElementRoundedRectCalories.material = materialRed;
-        }
-        if (GetNutriScoreColor("Fat", foodItem.Nutrition.Fat, foodItem.ServingType) == NutrientLevel.RESONABLE)
-        {
-            canvasElementRoundedRectFat.material = materialGreen;
-        }
-        else if (GetNutriScoreColor("Fat", foodItem.Nutrition.Fat, foodItem.ServingType) == NutrientLevel.CONCERNING)
-        {
-            canvasElementRoundedRectFat.material = materialYellow;
-        }
-        else
-        {
-            canvasElementRoundedRectFat.material = materialRed;
-        }
-        if (GetNutriScoreColor("Saturates", foodItem.Nutrition.Saturates, foodItem.ServingType) == NutrientLevel.RESONABLE)
-        {
-            canvasElementRoundedRectSaturates.material = materialGreen;
-        }
-        else if (GetNutriScoreColor("Saturates", foodItem.Nutrition.Saturates, foodItem.ServingType) == NutrientLevel.CONCERNING)
-        {
-            canvasElementRoundedRectSaturates.material = materialYellow;
-        }
-        else
-        {
-            canvasElementRoundedRectSaturates.material = materialRed;
-        }
-        if (GetNutriScoreColor("Sugar", foodItem.Nutrition.Sugar, foodItem.ServingType) == NutrientLevel.RESONABLE)
-        {
-            canvasElementRoundedRectSugar.material = materialGreen;
-        }
-        else if (GetNutriScoreColor("Sugar", foodItem.Nutrition.Sugar, foodItem.ServingType) == NutrientLevel.CONCERNING)
-        {
-            canvasElementRoundedRectSugar.material = materialYellow;
-        }
-        else
-        {
-            canvasElementRoundedRectSugar.material = materialRed;
-        }
-        if (GetNutriScoreColor("Salt", foodItem.Nutrition.Salt, foodItem.ServingType) == NutrientLevel.RESONABLE)
-        {
-            canvasElementRoundedRectSalt.material = materialGreen;
-        }
-        else if (GetNutriScoreColor("Salt", foodItem.Nutrition.Salt, foodItem.ServingType) == NutrientLevel.CONCERNING)
-        {
-            canvasElementRoundedRectSalt.material = materialYellow;
-        }
-        else
-        {
-            canvasElementRoundedRectSalt.material = materialRed;
-        }
 
+        canvasElementRoundedRectCalories.material  = LevelToMaterial(GetNutriScore("Calories",   foodItem.Nutrition.Calories,   foodItem.ServingType));
+        canvasElementRoundedRectFat.material       = LevelToMaterial(GetNutriScore("Fat",        foodItem.Nutrition.Fat,        foodItem.ServingType));
+        canvasElementRoundedRectSaturates.material = LevelToMaterial(GetNutriScore("Saturates",  foodItem.Nutrition.Saturates,  foodItem.ServingType));
+        canvasElementRoundedRectSugar.material     = LevelToMaterial(GetNutriScore("Sugar",      foodItem.Nutrition.Sugar,      foodItem.ServingType));
+        canvasElementRoundedRectSalt.material      = LevelToMaterial(GetNutriScore("Salt",       foodItem.Nutrition.Salt,       foodItem.ServingType));
     }
-    private NutrientLevel GetNutriScoreColor(string nutrient, float value, string servingType)
+
+    private Material LevelToMaterial(NutrientLevel level) => level switch
+    {
+        NutrientLevel.RESONABLE  => materialGreen,
+        NutrientLevel.CONCERNING => materialYellow,
+        _                        => materialRed
+    };
+
+    private NutrientLevel GetNutriScore(string nutrient, float value, string servingType)
     {
         if (servingType == "per 100g")
         {
-            if (nutrient == "Calories")
+            return nutrient switch
             {
-                if (value < 100) return NutrientLevel.RESONABLE;
-                else if (value < 200) return NutrientLevel.CONCERNING;
-                else return NutrientLevel.BAD;
-            }
-            else if (nutrient == "Fat")
-            {
-                if (value < 3) return NutrientLevel.RESONABLE;
-                else if (value < 17.5) return NutrientLevel.CONCERNING;
-                else return NutrientLevel.BAD;
-                
-            }
-            else if (nutrient == "Saturates")
-            {
-                if (value < 1.5) return NutrientLevel.RESONABLE;
-                else if (value < 5) return NutrientLevel.CONCERNING;
-                else return NutrientLevel.BAD;
-            }
-            else if (nutrient == "Sugar")
-            {
-                if (value < 5) return NutrientLevel.RESONABLE;
-                else if (value < 22.5) return NutrientLevel.CONCERNING;
-                else return NutrientLevel.BAD;
-            }
-            else if (nutrient == "Salt")
-            {
-                if (value < 0.3) return NutrientLevel.RESONABLE;
-                else if (value < 1.5) return NutrientLevel.CONCERNING;
-                else return NutrientLevel.BAD;
-            }
+                "Calories"  => value < 100  ? NutrientLevel.RESONABLE : value < 200  ? NutrientLevel.CONCERNING : NutrientLevel.BAD,
+                "Fat"       => value < 3    ? NutrientLevel.RESONABLE : value < 17.5f? NutrientLevel.CONCERNING : NutrientLevel.BAD,
+                "Saturates" => value < 1.5f ? NutrientLevel.RESONABLE : value < 5    ? NutrientLevel.CONCERNING : NutrientLevel.BAD,
+                "Sugar"     => value < 5    ? NutrientLevel.RESONABLE : value < 22.5f? NutrientLevel.CONCERNING : NutrientLevel.BAD,
+                "Salt"      => value < 0.3f ? NutrientLevel.RESONABLE : value < 1.5f ? NutrientLevel.CONCERNING : NutrientLevel.BAD,
+                _           => NutrientLevel.BAD
+            };
         }
-        else if (servingType == "1 serving")
+        if (servingType == "1 serving")
         {
-            if (nutrient == "Calories")
+            return nutrient switch
             {
-                if (value < 150) return NutrientLevel.RESONABLE;
-                else if (value < 300) return NutrientLevel.CONCERNING;
-                else return NutrientLevel.BAD;
-                
-            }
-            else if (nutrient == "Fat")
-            {
-                if (value < 5) return NutrientLevel.RESONABLE;
-                else if (value < 21) return NutrientLevel.CONCERNING;
-                else return NutrientLevel.BAD;
-                
-            }
-            else if (nutrient == "Saturates")
-            {
-                if (value < 2) return NutrientLevel.RESONABLE;
-                else if (value < 6) return NutrientLevel.CONCERNING;
-                else return NutrientLevel.BAD;
-            }
-            else if (nutrient == "Sugar")
-            {
-                if (value < 6) return NutrientLevel.RESONABLE;
-                else if (value < 27) return NutrientLevel.CONCERNING;
-                else return NutrientLevel.BAD;
-            }
-            else if (nutrient == "Salt")
-            {
-                if (value < 0.4) return NutrientLevel.RESONABLE;
-                else if (value < 1.8) return NutrientLevel.CONCERNING;
-                else return NutrientLevel.BAD;
-            }
+                "Calories"  => value < 150  ? NutrientLevel.RESONABLE : value < 300 ? NutrientLevel.CONCERNING : NutrientLevel.BAD,
+                "Fat"       => value < 5    ? NutrientLevel.RESONABLE : value < 21  ? NutrientLevel.CONCERNING : NutrientLevel.BAD,
+                "Saturates" => value < 2    ? NutrientLevel.RESONABLE : value < 6   ? NutrientLevel.CONCERNING : NutrientLevel.BAD,
+                "Sugar"     => value < 6    ? NutrientLevel.RESONABLE : value < 27  ? NutrientLevel.CONCERNING : NutrientLevel.BAD,
+                "Salt"      => value < 0.4f ? NutrientLevel.RESONABLE : value < 1.8f? NutrientLevel.CONCERNING : NutrientLevel.BAD,
+                _           => NutrientLevel.BAD
+            };
         }
-
         return NutrientLevel.BAD;
     }
-
 }
