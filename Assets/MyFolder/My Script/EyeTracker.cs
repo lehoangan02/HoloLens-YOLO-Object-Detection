@@ -8,8 +8,8 @@ using UnityEngine;
 public class EyeTracker : MonoBehaviour
 {
     public GazeInteractor gazeInteractor;
-    public GameObject     objectOfInterest;
-    public GameObject     hitPointDisplayPrefab;
+    public GameObject     objectOfInterest;       // optional — if null, records absolute gaze hits
+    public GameObject     hitPointDisplayPrefab;  // optional
     public float          maxGazeDistance = 3.0f;
 
     private GameObject   hitPointDisplayer;
@@ -21,43 +21,53 @@ public class EyeTracker : MonoBehaviour
 
     private void Awake()
     {
-        var trackerDataPath = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
-        trackerData = new StreamWriter(trackerDataPath);
+        var path = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
+        trackerData = new StreamWriter(path);
         trackerData.AutoFlush = false;
         trackerData.WriteLine("timestamp_utc,rel_x,rel_y,rel_z");
     }
 
     private void Start()
     {
-        hitPointDisplayer = Instantiate(hitPointDisplayPrefab);
-        hitPointDisplayer.SetActive(false);
+        // Guard: only instantiate if prefab is assigned
+        if (hitPointDisplayPrefab != null)
+        {
+            hitPointDisplayer = Instantiate(hitPointDisplayPrefab);
+            hitPointDisplayer.SetActive(false);
+        }
     }
 
     private void Update()
     {
-        if (!isTrackingEnabled || gazeInteractor == null || objectOfInterest == null) return;
+        if (!isTrackingEnabled || gazeInteractor == null) return;
 
-        var ray = new Ray(gazeInteractor.rayOriginTransform.position,
-                          gazeInteractor.rayOriginTransform.forward * maxGazeDistance);
+        var ray = new Ray(
+            gazeInteractor.rayOriginTransform.position,
+            gazeInteractor.rayOriginTransform.forward * maxGazeDistance);
 
-        if (Physics.Raycast(ray, out var hit))
-        {
-            if (hit.collider.gameObject == objectOfInterest)
-            {
-                hitPointDisplayer.transform.position = hit.point;
-                WriteTrackingPoint(hit.point);
-            }
-        }
+        if (!Physics.Raycast(ray, out var hit)) return;
+
+        if (hitPointDisplayer != null)
+            hitPointDisplayer.transform.position = hit.point;
+
+        // Record when: no specific object required, or gaze hit the target object
+        if (objectOfInterest == null || hit.collider.gameObject == objectOfInterest)
+            WriteTrackingPoint(hit.point);
     }
 
     private void WriteTrackingPoint(Vector3 hitPoint)
     {
         if (trackerData == null) return;
 
-        var    relativePoint = objectOfInterest.transform.position - hitPoint;
-        string ts            = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        string ts = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
+        // Relative to objectOfInterest when set; absolute world position otherwise
+        Vector3 pt = objectOfInterest != null
+            ? objectOfInterest.transform.position - hitPoint
+            : hitPoint;
+
         trackerData.WriteLine(FormattableString.Invariant(
-            $"{ts},{relativePoint.x},{relativePoint.y},{relativePoint.z}"));
+            $"{ts},{pt.x},{pt.y},{pt.z}"));
         if (++_writeCount % 30 == 0) trackerData.Flush();
     }
 
@@ -71,6 +81,7 @@ public class EyeTracker : MonoBehaviour
         if (isTrackingEnabled) return;
         isTrackingEnabled = true;
         hitPointDisplayer?.SetActive(true);
+        Debug.Log("[EyeTracker] Tracking ON");
     }
 
     public void TurnOff()
@@ -78,11 +89,14 @@ public class EyeTracker : MonoBehaviour
         if (!isTrackingEnabled) return;
         isTrackingEnabled = false;
         hitPointDisplayer?.SetActive(false);
+        Debug.Log("[EyeTracker] Tracking OFF");
     }
 
     public async void SendFile()
     {
-        trackerData.Close();
+        trackerData?.Flush();
+        trackerData?.Close();
+        trackerData = null;
         try
         {
             await SendFileTCPAsync();
@@ -93,15 +107,14 @@ public class EyeTracker : MonoBehaviour
         }
         finally
         {
-            var trackerDataPath = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
-            trackerData = new StreamWriter(trackerDataPath, append: true);
+            var path = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
+            trackerData = new StreamWriter(path, append: true);
             trackerData.AutoFlush = false;
         }
     }
 
     private async Task SendFileTCPAsync()
     {
-        // Wait up to 5 s for MacIP if not yet discovered
         string targetIP = NetworkDiscovery.Instance?.MacIP;
         if (string.IsNullOrEmpty(targetIP))
         {
@@ -125,7 +138,7 @@ public class EyeTracker : MonoBehaviour
             using (NetworkStream stream = client.GetStream())
             using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
             {
-                Debug.Log($"[EyeTracker] Sending file to {targetIP}:{port}...");
+                Debug.Log($"[EyeTracker] Sending file to {targetIP}:{port}…");
                 byte[] buffer = new byte[4096];
                 int bytesRead;
                 while ((bytesRead = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0)
@@ -137,15 +150,12 @@ public class EyeTracker : MonoBehaviour
 
     public void DeleteFile()
     {
-        trackerData.Close();
-        var trackerDataPath = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
-        if (File.Exists(trackerDataPath))
-        {
-            File.Delete(trackerDataPath);
-            Debug.Log("[EyeTracker] Deleted eyetracking.csv");
-        }
-        trackerData = new StreamWriter(trackerDataPath, append: false);
+        trackerData?.Close();
+        var path = Path.Combine(Application.persistentDataPath, "eyetracking.csv");
+        if (File.Exists(path)) File.Delete(path);
+        trackerData = new StreamWriter(path, append: false);
         trackerData.AutoFlush = false;
         trackerData.WriteLine("timestamp_utc,rel_x,rel_y,rel_z");
+        Debug.Log("[EyeTracker] Deleted eyetracking.csv");
     }
 }
