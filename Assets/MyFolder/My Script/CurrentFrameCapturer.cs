@@ -33,6 +33,9 @@ public class CurrentFrameCapturer : MonoBehaviour
     private volatile bool   _reconnectPending = false;
     private volatile string _pendingIP        = null;
 
+    // Set to true only after Start() coroutine fully completes
+    private bool _initialized = false;
+
     public int width, height;
 
     // ── Unity lifecycle ──────────────────────────────────────────────────── //
@@ -60,6 +63,11 @@ public class CurrentFrameCapturer : MonoBehaviour
         InitNetwork();
 
         WebCamTextureAccess.Instance.Play();
+
+        // Wait for the webcam to report a real resolution (default is 16x16 until ready)
+        yield return new WaitUntil(() =>
+            WebCamTextureAccess.Instance.WebCamTexture.width > 16);
+
         width  = WebCamTextureAccess.Instance.WebCamTexture.width;
         height = WebCamTextureAccess.Instance.WebCamTexture.height;
         Debug.Log($"[CurrentFrameCapturer] Webcam: {width}x{height}");
@@ -67,6 +75,8 @@ public class CurrentFrameCapturer : MonoBehaviour
         running      = true;
         workerThread = new Thread(WorkerLoop) { IsBackground = true };
         workerThread.Start();
+
+        _initialized = true;
     }
 
     private void Update()
@@ -88,10 +98,14 @@ public class CurrentFrameCapturer : MonoBehaviour
             }
         }
 
-        if (WebCamTextureAccess.Instance.WebCamTexture.isPlaying)
+        if (!_initialized) return;
+
+        var webcam = WebCamTextureAccess.Instance.WebCamTexture;
+        if (webcam.isPlaying && webcam.width > 16)
         {
-            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-            tex.SetPixels32(WebCamTextureAccess.Instance.WebCamTexture.GetPixels32());
+            // Use live dimensions — they may differ from the values captured at Start time
+            var tex = new Texture2D(webcam.width, webcam.height, TextureFormat.RGBA32, false);
+            tex.SetPixels32(webcam.GetPixels32());
             tex.Apply();
 
             byte[] jpg = tex.EncodeToJPG(50);
