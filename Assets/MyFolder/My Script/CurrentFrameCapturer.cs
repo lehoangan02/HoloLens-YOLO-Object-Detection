@@ -15,6 +15,8 @@ public class CurrentFrameCapturer : MonoBehaviour
     private const int  MaxUdpPacketSize = 1400;  // below WiFi MTU (1472) — no IP fragmentation
     private const int  FramePort        = 5016;   // must match FRAME_PORT in controller_app.py
     private const bool no_split         = false;  // chunked UDP
+    private const int  SendWidth        = 640;    // output resolution (16:9, matches camera AR)
+    private const int  SendHeight       = 360;
 
     public string targetIP;   // shown in Inspector; overridden by NetworkDiscovery
 
@@ -94,10 +96,17 @@ public class CurrentFrameCapturer : MonoBehaviour
         var webcam = WebCamTextureAccess.Instance.WebCamTexture;
         if (webcam.isPlaying && webcam.width > 16)
         {
-            // Use live dimensions — they may differ from the values captured at Start time
-            var tex = new Texture2D(webcam.width, webcam.height, TextureFormat.RGBA32, false);
-            tex.SetPixels32(webcam.GetPixels32());
+            // Scale to SendWidth×SendHeight via GPU blit — preserves aspect ratio, no distortion
+            var rt = RenderTexture.GetTemporary(SendWidth, SendHeight, 0, RenderTextureFormat.ARGB32);
+            Graphics.Blit(webcam, rt);
+
+            var prev = RenderTexture.active;
+            RenderTexture.active = rt;
+            var tex = new Texture2D(SendWidth, SendHeight, TextureFormat.RGBA32, false);
+            tex.ReadPixels(new Rect(0, 0, SendWidth, SendHeight), 0, 0);
             tex.Apply();
+            RenderTexture.active = prev;
+            RenderTexture.ReleaseTemporary(rt);
 
             byte[] jpg = tex.EncodeToJPG(50);
             Destroy(tex);
@@ -155,7 +164,7 @@ public class CurrentFrameCapturer : MonoBehaviour
         if (!_loggedFirst)
         {
             int chunks = (jpg.Length + MaxUdpPacketSize - 1) / MaxUdpPacketSize;
-            Debug.Log($"[CurrentFrameCapturer] First frame: {width}x{height}  JPEG={jpg.Length/1024}KB  chunks={chunks}  →{ep}");
+            Debug.Log($"[CurrentFrameCapturer] First frame: {SendWidth}x{SendHeight} (camera {width}x{height})  JPEG={jpg.Length/1024}KB  chunks={chunks}  →{ep}");
             _loggedFirst = true;
         }
 

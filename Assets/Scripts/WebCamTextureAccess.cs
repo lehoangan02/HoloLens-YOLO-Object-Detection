@@ -13,7 +13,7 @@ namespace Assets.Scripts
 #endif  
 
         private const int CameraFps = 4;
-        private readonly Vector2Int requestedCameraResolution = new(896, 504);
+        private readonly Vector2Int requestedCameraResolution = new(640, 360);
 
         /// <summary>
         ///     Singleton instance of <see cref="WebCamTextureAccess"/>.
