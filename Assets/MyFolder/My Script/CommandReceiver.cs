@@ -15,6 +15,7 @@ using UnityEngine;
 /// Supported commands (port 5015):
 ///   CMD:START_EYE   CMD:STOP_EYE   CMD:SEND_EYE
 ///   CMD:START_HEAD  CMD:STOP_HEAD  CMD:SEND_HEAD
+///   CMD:START_LABEL CMD:STOP_LABEL CMD:SEND_LABEL
 ///   CMD:SEND_MARKERS  CMD:RESET
 ///
 /// Attach to any active GameObject. Assign eyeTracker and headTracker
@@ -24,6 +25,7 @@ public class CommandReceiver : MonoBehaviour
 {
     public EyeTracker  eyeTracker;
     public HeadTracker headTracker;
+    public LabelTracker labelTracker;
 
     private const int CmdPort = 5015;
     private const int MarkerFilePort = 5017;
@@ -70,9 +72,22 @@ public class CommandReceiver : MonoBehaviour
         // Auto-find trackers if not assigned in Inspector
         if (eyeTracker  == null) eyeTracker  = FindObjectOfType<EyeTracker>();
         if (headTracker == null) headTracker = FindObjectOfType<HeadTracker>();
+        if (labelTracker == null) labelTracker = FindObjectOfType<LabelTracker>();
+        if (labelTracker == null)
+            labelTracker = gameObject.AddComponent<LabelTracker>();
+        if (labelTracker != null && labelTracker.hitPointDisplayPrefab == null &&
+            eyeTracker != null && eyeTracker.hitPointDisplayPrefab != null)
+        {
+            labelTracker.hitPointDisplayPrefab = eyeTracker.hitPointDisplayPrefab;
+        }
+        if (labelTracker != null && eyeTracker != null)
+            labelTracker.maxGazeDistance = Mathf.Max(labelTracker.maxGazeDistance, eyeTracker.maxGazeDistance);
+        if (labelTracker != null && eyeTracker != null && eyeTracker.gazeInteractor != null)
+            labelTracker.SetGazeInteractor(eyeTracker.gazeInteractor);
 
         if (eyeTracker  == null) Debug.LogWarning("[CommandReceiver] EyeTracker not found");
         if (headTracker == null) Debug.LogWarning("[CommandReceiver] HeadTracker not found");
+        if (labelTracker == null) Debug.LogWarning("[CommandReceiver] LabelTracker not found");
 
         markerPath = Path.Combine(Application.persistentDataPath, "sync_markers.csv");
         OpenMarkerWriter(append: true);
@@ -142,12 +157,17 @@ public class CommandReceiver : MonoBehaviour
             case "CMD:START_HEAD":  headTracker?.TurnOn();    break;
             case "CMD:STOP_HEAD":   headTracker?.TurnOff();   break;
             case "CMD:SEND_HEAD":   headTracker?.SendFile();  break;
+            case "CMD:START_LABEL": labelTracker?.TurnOn();   break;
+            case "CMD:STOP_LABEL":  labelTracker?.TurnOff();  break;
+            case "CMD:SEND_LABEL":  labelTracker?.SendFile(); break;
             case "CMD:SEND_MARKERS": SendMarkerFile();        break;
             case "CMD:RESET":
                 eyeTracker?.TurnOff();
                 headTracker?.TurnOff();
+                labelTracker?.TurnOff();
                 eyeTracker?.DeleteFile();
                 headTracker?.DeleteFile();
+                labelTracker?.DeleteFile();
                 ResetMarkerFile();
                 break;
             default:

@@ -4,6 +4,7 @@ using Microsoft.MixedReality.GraphicsTools;
 
 public class NutritionLabelController : MonoBehaviour
 {
+    [SerializeField] private Canvas worldCanvas;
     [SerializeField] private LineRenderer lineRenderer;
     [SerializeField] private GameObject objectCenter;
     [SerializeField] private TextMeshProUGUI foodNameTextMeshPro;
@@ -21,12 +22,27 @@ public class NutritionLabelController : MonoBehaviour
     [SerializeField] private CanvasElementRoundedRect canvasElementRoundedRectSaturates;
     [SerializeField] private CanvasElementRoundedRect canvasElementRoundedRectSugar;
     [SerializeField] private CanvasElementRoundedRect canvasElementRoundedRectSalt;
+    [SerializeField] private BoxCollider hitCollider;
+    [SerializeField] private Vector3 hitColliderPadding = new Vector3(0.03f, 0.03f, 0f);
+    [SerializeField] private float hitColliderDepth = 0.04f;
 
     private Vector3 targetPosition;
     private bool positionInitialized;
+    private bool hitColliderInitialized;
     private const float LerpSpeed = 8f;
 
     enum NutrientLevel { BAD, CONCERNING, RESONABLE }
+
+    public string CurrentFoodName =>
+        foodNameTextMeshPro != null && !string.IsNullOrWhiteSpace(foodNameTextMeshPro.text)
+            ? foodNameTextMeshPro.text
+            : gameObject.name;
+
+    void Awake()
+    {
+        EnsureHitCollider();
+        RefreshHitCollider();
+    }
 
     void Update()
     {
@@ -36,6 +52,9 @@ public class NutritionLabelController : MonoBehaviour
             lineRenderer.SetPosition(0, objectCenter.transform.position);
             lineRenderer.SetPosition(1, transform.position);
         }
+
+        if (!hitColliderInitialized)
+            RefreshHitCollider();
     }
 
     public void UpdatePosition(Vector3 newPosition)
@@ -48,6 +67,7 @@ public class NutritionLabelController : MonoBehaviour
         }
         lineRenderer.SetPosition(0, objectCenter.transform.position);
         lineRenderer.SetPosition(1, transform.position);
+        RefreshHitCollider();
     }
 
     public void SetInfo(FoodItem foodItem)
@@ -65,6 +85,43 @@ public class NutritionLabelController : MonoBehaviour
         canvasElementRoundedRectSaturates.material = LevelToMaterial(GetNutriScore("Saturates",  foodItem.Nutrition.Saturates,  foodItem.ServingType));
         canvasElementRoundedRectSugar.material     = LevelToMaterial(GetNutriScore("Sugar",      foodItem.Nutrition.Sugar,      foodItem.ServingType));
         canvasElementRoundedRectSalt.material      = LevelToMaterial(GetNutriScore("Salt",       foodItem.Nutrition.Salt,       foodItem.ServingType));
+    }
+
+    private void EnsureHitCollider()
+    {
+        if (worldCanvas == null)
+            worldCanvas = GetComponentInChildren<Canvas>(includeInactive: true);
+
+        if (hitCollider == null)
+            hitCollider = GetComponent<BoxCollider>();
+        if (hitCollider == null)
+            hitCollider = gameObject.AddComponent<BoxCollider>();
+
+        hitCollider.isTrigger = true;
+    }
+
+    private void RefreshHitCollider()
+    {
+        if (hitCollider == null)
+            return;
+
+        if (worldCanvas == null)
+            worldCanvas = GetComponentInChildren<Canvas>(includeInactive: true);
+
+        Bounds bounds = worldCanvas != null
+            ? RectTransformUtility.CalculateRelativeRectTransformBounds(transform, worldCanvas.transform)
+            : RectTransformUtility.CalculateRelativeRectTransformBounds(transform);
+
+        if (bounds.size == Vector3.zero)
+            return;
+
+        hitCollider.center = bounds.center;
+        hitCollider.size = new Vector3(
+            Mathf.Max(bounds.size.x + hitColliderPadding.x, 0.01f),
+            Mathf.Max(bounds.size.y + hitColliderPadding.y, 0.01f),
+            Mathf.Max(hitColliderDepth + hitColliderPadding.z, 0.01f)
+        );
+        hitColliderInitialized = true;
     }
 
     private Material LevelToMaterial(NutrientLevel level) => level switch

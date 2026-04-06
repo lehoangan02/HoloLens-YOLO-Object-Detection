@@ -43,9 +43,9 @@ public class EyeTracker : MonoBehaviour
 
         var ray = new Ray(
             gazeInteractor.rayOriginTransform.position,
-            gazeInteractor.rayOriginTransform.forward * maxGazeDistance);
+            gazeInteractor.rayOriginTransform.forward);
 
-        if (!Physics.Raycast(ray, out var hit)) return;
+        if (!TryFindTrackingHit(ray, out RaycastHit hit)) return;
 
         // Only act when gaze hits the target object (or any object if none specified)
         if (objectOfInterest != null && hit.collider.gameObject != objectOfInterest) return;
@@ -70,6 +70,32 @@ public class EyeTracker : MonoBehaviour
         trackerData.WriteLine(FormattableString.Invariant(
             $"{ts},{pt.x},{pt.y},{pt.z}"));
         if (++_writeCount % 30 == 0) trackerData.Flush();
+    }
+
+    private bool TryFindTrackingHit(Ray ray, out RaycastHit selectedHit)
+    {
+        RaycastHit[] hits = Physics.RaycastAll(
+            ray,
+            maxGazeDistance,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Collide
+        );
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider.GetComponentInParent<NutritionLabelController>() != null)
+                continue;
+
+            if (objectOfInterest != null && hit.collider.gameObject != objectOfInterest)
+                continue;
+
+            selectedHit = hit;
+            return true;
+        }
+
+        selectedHit = default;
+        return false;
     }
 
     private void OnDestroy()

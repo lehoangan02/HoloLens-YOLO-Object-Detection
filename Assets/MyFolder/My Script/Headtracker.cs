@@ -49,9 +49,9 @@ public class HeadTracker : MonoBehaviour
         if (!isTrackingEnabled || mainCamera == null) return;
 
         var ray = new Ray(mainCamera.transform.position,
-                          mainCamera.transform.forward * maxHeadDistance);
+                          mainCamera.transform.forward);
 
-        if (!Physics.Raycast(ray, out var hit)) return;
+        if (!TryFindTrackingHit(ray, out RaycastHit hit)) return;
 
         // Only act when head ray hits the target object (or any object if none specified)
         if (objectOfInterest != null && hit.collider.gameObject != objectOfInterest) return;
@@ -79,6 +79,32 @@ public class HeadTracker : MonoBehaviour
                 $"{ts},{hitPoint.x},{hitPoint.y},{hitPoint.z}"));
         }
         if (++_writeCount % 30 == 0) trackerData.Flush();
+    }
+
+    private bool TryFindTrackingHit(Ray ray, out RaycastHit selectedHit)
+    {
+        RaycastHit[] hits = Physics.RaycastAll(
+            ray,
+            maxHeadDistance,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Collide
+        );
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider.GetComponentInParent<NutritionLabelController>() != null)
+                continue;
+
+            if (objectOfInterest != null && hit.collider.gameObject != objectOfInterest)
+                continue;
+
+            selectedHit = hit;
+            return true;
+        }
+
+        selectedHit = default;
+        return false;
     }
 
     private void OnDestroy()
