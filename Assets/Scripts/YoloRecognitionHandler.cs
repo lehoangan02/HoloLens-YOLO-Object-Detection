@@ -116,21 +116,23 @@ namespace Assets.Scripts
                 .OrderByDescending(i => i.YoloItem.Confidence)
                 .ToList();
 
-            // Select up to MaxLabels winners: no duplicate class, no viewport overlap
+            // Select up to MaxLabels winners: no duplicate class only
+            // Overlap/depth is handled by nudging display positions, not by dropping labels
             var winners = new List<DisplayedItem>();
             foreach (var candidate in candidates)
             {
                 if (winners.Count >= MaxLabels) break;
                 if (winners.Any(w => w.YoloItem.MostLikelyClassFood == candidate.YoloItem.MostLikelyClassFood))
                     continue;
-                if (winners.Any(w => LabelsOverlapInViewport(w, candidate)))
-                    continue;
                 winners.Add(candidate);
             }
 
-            // Create/update markers for all winners
-            foreach (var winner in winners)
-                this.ManageTrackingMarkerFood(winner);
+            // Compute display positions — nudge apart if they'd overlap or one hides behind the other
+            Vector3[] displayPositions = ComputeDisplayPositions(winners);
+
+            // Create/update markers at their (possibly nudged) display positions
+            for (int i = 0; i < winners.Count; i++)
+                this.ManageTrackingMarkerFood(winners[i], displayPositions[i]);
 
             // Update persistent markers when there are active winners
             if (winners.Count > 0)
@@ -140,7 +142,6 @@ namespace Assets.Scripts
                     .Where(m => m != null)
                     .ToList();
 
-                // Destroy old persistent markers no longer in use
                 foreach (var pm in _persistentMarkers)
                 {
                     if (pm != null && !newMarkers.Contains(pm))
@@ -166,84 +167,88 @@ namespace Assets.Scripts
         }
 
         /// <summary>
-        /// Returns true if the label of <paramref name="existing"/> (already a winner with a live
-        /// TrackingMarker) would visually overlap a label placed at <paramref name="candidate"/>'s
-        /// world position.  Uses the existing marker's BoxCollider — which NutritionLabelController
-        /// sizes to the actual canvas bounds — to derive the real screen-space footprint.
-        /// Falls back to a 0.35 viewport-unit distance check when the collider isn't ready yet.
+        /// Returns display positions for each winner, nudging them apart along the camera's right
+        /// axis when either:
+        ///   - their label rects would overlap in viewport space, or
+        ///   - one is 0.6 m+ behind the other and close on screen (depth covering).
+        /// The nudge is split symmetrically: both labels move equal amounts in opposite directions.
         /// </summary>
-        private static bool LabelsOverlapInViewport(DisplayedItem existing, DisplayedItem candidate)
+        private static Vector3[] ComputeDisplayPositions(List<DisplayedItem> winners)
         {
+            var positions = winners.Select(w => w.PositionInSpace).ToArray();
+            if (winners.Count < 2) return positions;
+
             Camera cam = Camera.main;
-            if (cam == null) return false;
+            if (cam == null) return positions;
 
-            // Try to read the actual world-space half-extents from the existing label's collider
-            Vector2 halfExtents = Vector2.zero;
-            if (existing.TrackingMarker != null)
-            {
-                BoxCollider col = existing.TrackingMarker.GetComponentInChildren<BoxCollider>();
-                if (col != null)
-                    halfExtents = new Vector2(col.size.x * 0.5f, col.size.y * 0.5f);
-            }
+            Vector3 posA = positions[0];
+            Vector3 posB = positions[1];
 
-            Vector3 posA = existing.PositionInSpace;
-            Vector3 posB = candidate.PositionInSpace;
+            Vector3 vA = cam.WorldToViewportPoint(posA);
+            Vector3 vB = cam.WorldToViewportPoint(posB);
 
-            if (halfExtents == Vector2.zero)
-            {
-                // Collider not ready yet — fallback: 0.35 viewport-unit distance
-                Vector3 vA = cam.WorldToViewportPoint(posA);
-                Vector3 vB = cam.WorldToViewportPoint(posB);
-                if (vA.z < 0 || vB.z < 0) return false;
-                return Vector2.Distance(new Vector2(vA.x, vA.y), new Vector2(vB.x, vB.y)) < 0.35f;
-            }
+            // If either point is behind the camera we can't compute reliable viewport coords
+            if (vA.z < 0 || vB.z < 0) return positions;
 
-            // Project the four corners of the existing label's rect to screen space,
-            // then build a screen-space Rect and check if the candidate's centre falls inside
-            // the union rect (expanded by the same half-extents for the candidate label).
-            Vector3 right = cam.transform.right   * halfExtents.x;
-            Vector3 up    = cam.transform.up      * halfExtents.y;
+            float screenDist2D = Vector2.Distance(new Vector2(vA.x, vA.y), new Vector2(vB.x, vB.y));
+            float depthDiff    = Mathf.Abs(vA.z - vB.z);
 
-            // Corners of existing label in world space (label faces the camera)
-            Vector3[] corners =
-            {
-                posA - right - up,
-                posA + right - up,
-                posA - right + up,
-                posA + right + up,
-            };
+            // Get the label's world-space half-width from the collider of whichever marker exists
+            float halfWidthWorld = GetLabelHalfWidth(winners[0].TrackingMarker);
+            if (halfWidthWorld == 0f) halfWidthWorld = GetLabelHalfWidth(winners[1].TrackingMarker);
+            if (halfWidthWorld == 0f) halfWidthWorld = 0.15f; // fallback until collider is ready
 
-            float minX = float.MaxValue, maxX = float.MinValue;
-            float minY = float.MaxValue, maxY = float.MinValue;
-            foreach (Vector3 c in corners)
-            {
-                Vector3 sp = cam.WorldToViewportPoint(c);
-                if (sp.z < 0) return false; // behind camera
-                minX = Mathf.Min(minX, sp.x); maxX = Mathf.Max(maxX, sp.x);
-                minY = Mathf.Min(minY, sp.y); maxY = Mathf.Max(maxY, sp.y);
-            }
+            // Convert half-width to viewport units at posA's depth
+            float labelVpHalfWidth = Mathf.Abs(
+                cam.WorldToViewportPoint(posA + cam.transform.right * halfWidthWorld).x - vA.x);
 
-            // Expand by the candidate label's half-extents (same size, expressed in viewport)
-            Vector3 spA = cam.WorldToViewportPoint(posA);
-            Vector3 spB = cam.WorldToViewportPoint(posB);
-            if (spA.z < 0 || spB.z < 0) return false;
+            // Two label widths + small margin = minimum centre-to-centre separation needed
+            float requiredSep = 2f * labelVpHalfWidth + 0.02f;
 
-            float vHalfW = (maxX - minX) * 0.5f;
-            float vHalfH = (maxY - minY) * 0.5f;
+            // Check both overlap cases
+            bool screenOverlap  = screenDist2D < requiredSep;
+            bool depthCovering  = depthDiff >= 0.6f && screenDist2D < requiredSep;
 
-            Rect expandedRect = new Rect(minX - vHalfW, minY - vHalfH,
-                                         (maxX - minX) + 2 * vHalfW,
-                                         (maxY - minY) + 2 * vHalfH);
+            if (!screenOverlap && !depthCovering) return positions;
 
-            return expandedRect.Contains(new Vector2(spB.x, spB.y));
+            float deficit = requiredSep - screenDist2D;
+            if (deficit <= 0f) return positions;
+
+            // Determine push direction for B (A goes the opposite way); if centres coincide, push right
+            float dirB = (vB.x >= vA.x) ? 1f : -1f;
+            if (Mathf.Abs(vB.x - vA.x) < 0.001f) dirB = 1f;
+
+            float halfDeficit = deficit * 0.5f;
+
+            // Compute world-to-viewport-x scale at each position by sampling a small offset
+            const float testWorld = 0.05f;
+            float vpPerWorldA = (cam.WorldToViewportPoint(posA + cam.transform.right * testWorld).x - vA.x) / testWorld;
+            float vpPerWorldB = (cam.WorldToViewportPoint(posB + cam.transform.right * testWorld).x - vB.x) / testWorld;
+
+            // Guard against degenerate cases (labels extremely far away)
+            if (Mathf.Abs(vpPerWorldA) < 0.0001f || Mathf.Abs(vpPerWorldB) < 0.0001f)
+                return positions;
+
+            // Push A and B apart symmetrically along camera right
+            positions[0] = posA + cam.transform.right * (-dirB * halfDeficit / vpPerWorldA);
+            positions[1] = posB + cam.transform.right * ( dirB * halfDeficit / vpPerWorldB);
+
+            return positions;
         }
 
-        private void ManageTrackingMarkerFood(DisplayedItem item)
+        private static float GetLabelHalfWidth(GameObject marker)
+        {
+            if (marker == null) return 0f;
+            BoxCollider col = marker.GetComponentInChildren<BoxCollider>();
+            return col != null ? col.size.x * 0.5f : 0f;
+        }
+
+        private void ManageTrackingMarkerFood(DisplayedItem item, Vector3 displayPosition)
         {
             if (item.YoloItem.MostLikelyClassFood == null) return;
 
             if (item.TrackingMarker == null)
-                item.TrackingMarker = Instantiate(this.labelObject, item.PositionInSpace, Quaternion.identity);
+                item.TrackingMarker = Instantiate(this.labelObject, displayPosition, Quaternion.identity);
 
             NutritionLabelController labelController = item.TrackingMarker.GetComponent<NutritionLabelController>();
             if (FoodTypes.Instance == null)
@@ -253,7 +258,7 @@ namespace Assets.Scripts
             }
 
             labelController.SetInfo(FoodTypes.Instance.GetFoodItem(item.YoloItem.MostLikelyClassFood));
-            labelController.UpdatePosition(item.PositionInSpace);
+            labelController.UpdatePosition(displayPosition);
         }
     }
 }
