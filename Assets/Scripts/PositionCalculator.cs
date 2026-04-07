@@ -81,7 +81,7 @@ namespace Assets.Scripts
 
             if (PhysicsCaller.SphereCastOnSpatialMesh(sphereCastOrigin, direction, out RaycastHit hitInfo))
             {
-                const float maxLabelDistance = 2f;
+                const float maxLabelDistance = 1.75f;
                 Vector3 hitPoint = hitInfo.point;
                 float dist = Vector3.Distance(cameraTransform.Position, hitPoint);
                 if (dist > maxLabelDistance)

@@ -17,6 +17,7 @@ public class NutritionLabelController : MonoBehaviour
     [SerializeField] private Material materialRed;
     [SerializeField] private Material materialGreen;
     [SerializeField] private Material materialYellow;
+    [SerializeField] private Material materialWhite;
     [SerializeField] private CanvasElementRoundedRect canvasElementRoundedRectCalories;
     [SerializeField] private CanvasElementRoundedRect canvasElementRoundedRectFat;
     [SerializeField] private CanvasElementRoundedRect canvasElementRoundedRectSaturates;
@@ -80,11 +81,14 @@ public class NutritionLabelController : MonoBehaviour
         sugarTextMeshPro.text = foodItem.Nutrition.Sugar.ToString() + "g";
         saltTextMeshPro.text = foodItem.Nutrition.Salt.ToString() + "g";
 
-        canvasElementRoundedRectCalories.material  = LevelToMaterial(GetNutriScore("Calories",   foodItem.Nutrition.Calories,   foodItem.ServingType));
+        canvasElementRoundedRectCalories.material  = materialWhite;
         canvasElementRoundedRectFat.material       = LevelToMaterial(GetNutriScore("Fat",        foodItem.Nutrition.Fat,        foodItem.ServingType));
         canvasElementRoundedRectSaturates.material = LevelToMaterial(GetNutriScore("Saturates",  foodItem.Nutrition.Saturates,  foodItem.ServingType));
         canvasElementRoundedRectSugar.material     = LevelToMaterial(GetNutriScore("Sugar",      foodItem.Nutrition.Sugar,      foodItem.ServingType));
-        canvasElementRoundedRectSalt.material      = LevelToMaterial(GetNutriScore("Salt",       foodItem.Nutrition.Salt,       foodItem.ServingType));
+        if (canvasElementRoundedRectSalt != null)
+            canvasElementRoundedRectSalt.material  = LevelToMaterial(GetNutriScore("Salt",       foodItem.Nutrition.Salt,       foodItem.ServingType));
+        else
+            Debug.LogError("canvasElementRoundedRectSalt is not assigned in the Inspector.");
     }
 
     private void EnsureHitCollider()
