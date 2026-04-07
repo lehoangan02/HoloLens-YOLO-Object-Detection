@@ -1390,6 +1390,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 228823364ee5bfe43a36e7ae7a2c6077, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  worldCanvas: {fileID: 0}
   lineRenderer: {fileID: 6500906165052896097}
   objectCenter: {fileID: 5753166052448897288}
   foodNameTextMeshPro: {fileID: 7261079355628616376}
@@ -1402,11 +1403,15 @@ MonoBehaviour:
   materialRed: {fileID: 2100000, guid: 8550022ea6962514f9a97029894a64ea, type: 2}
   materialGreen: {fileID: 2100000, guid: f91c553680746f14db357baf8b50e24a, type: 2}
   materialYellow: {fileID: 2100000, guid: b064d174c9208c542b061f532090e2b0, type: 2}
+  materialWhite: {fileID: 2100000, guid: 053970c0ed6d9754d90829d77115a4d0, type: 2}
   canvasElementRoundedRectCalories: {fileID: 3405548722629710438}
   canvasElementRoundedRectFat: {fileID: 1112161375280159420}
   canvasElementRoundedRectSaturates: {fileID: 4901400420169810358}
   canvasElementRoundedRectSugar: {fileID: 5502622924040736595}
   canvasElementRoundedRectSalt: {fileID: 3405548722629710438}
+  hitCollider: {fileID: 0}
+  hitColliderPadding: {x: 0.03, y: 0.03, z: 0}
+  hitColliderDepth: 0.04
 --- !u!120 &6500906165052896097
 LineRenderer:
   serializedVersion: 2
