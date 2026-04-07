@@ -102,9 +102,18 @@ public class LabelTracker : MonoBehaviour
         string ts = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         Vector3 localPoint = label.transform.InverseTransformPoint(hit.point);
 
-        trackerData.WriteLine(FormattableString.Invariant(
-            $"{ts},{EscapeCsv(label.CurrentFoodName)},{hit.point.x},{hit.point.y},{hit.point.z}," +
-            $"{localPoint.x},{localPoint.y},{localPoint.z},{hit.distance}"
+        trackerData.WriteLine(string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            "{0},{1},{2},{3},{4},{5},{6},{7},{8}",
+            ts,
+            EscapeCsv(label.CurrentFoodName),
+            hit.point.x,
+            hit.point.y,
+            hit.point.z,
+            localPoint.x,
+            localPoint.y,
+            localPoint.z,
+            hit.distance
         ));
         if (++_writeCount % 30 == 0)
             trackerData.Flush();
