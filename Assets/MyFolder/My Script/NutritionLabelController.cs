@@ -81,14 +81,18 @@ public class NutritionLabelController : MonoBehaviour
         sugarTextMeshPro.text = foodItem.Nutrition.Sugar.ToString() + "g";
         saltTextMeshPro.text = foodItem.Nutrition.Salt.ToString() + "g";
 
-        canvasElementRoundedRectCalories.material  = materialWhite;
-        canvasElementRoundedRectFat.material       = LevelToMaterial(GetNutriScore("Fat",        foodItem.Nutrition.Fat,        foodItem.ServingType));
-        canvasElementRoundedRectSaturates.material = LevelToMaterial(GetNutriScore("Saturates",  foodItem.Nutrition.Saturates,  foodItem.ServingType));
-        canvasElementRoundedRectSugar.material     = LevelToMaterial(GetNutriScore("Sugar",      foodItem.Nutrition.Sugar,      foodItem.ServingType));
-        if (canvasElementRoundedRectSalt != null)
-            canvasElementRoundedRectSalt.material  = LevelToMaterial(GetNutriScore("Salt",       foodItem.Nutrition.Salt,       foodItem.ServingType));
-        else
-            Debug.LogError("canvasElementRoundedRectSalt is not assigned in the Inspector.");
+        SetMaterial(canvasElementRoundedRectCalories,  materialWhite);
+        SetMaterial(canvasElementRoundedRectFat,       LevelToMaterial(GetNutriScore("Fat",       foodItem.Nutrition.Fat,       foodItem.ServingType)));
+        SetMaterial(canvasElementRoundedRectSaturates, LevelToMaterial(GetNutriScore("Saturates", foodItem.Nutrition.Saturates, foodItem.ServingType)));
+        SetMaterial(canvasElementRoundedRectSugar,     LevelToMaterial(GetNutriScore("Sugar",     foodItem.Nutrition.Sugar,     foodItem.ServingType)));
+        SetMaterial(canvasElementRoundedRectSalt,      LevelToMaterial(GetNutriScore("Salt",      foodItem.Nutrition.Salt,      foodItem.ServingType)));
+    }
+
+    private static void SetMaterial(CanvasElementRoundedRect element, Material mat)
+    {
+        if (element == null) { Debug.LogError($"CanvasElementRoundedRect is not assigned."); return; }
+        element.material = mat;
+        element.SetAllDirty();
     }
 
     private void EnsureHitCollider()
