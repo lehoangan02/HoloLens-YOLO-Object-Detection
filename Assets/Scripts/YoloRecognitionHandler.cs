@@ -11,6 +11,7 @@ namespace Assets.Scripts
     public class YoloRecognitionHandler : MonoBehaviour
     {
         private readonly List<DisplayedItem> yoloItems = new();
+        private GameObject persistentMarker;
 
         [SerializeField]
         private GameObject labelObject;
@@ -93,7 +94,10 @@ namespace Assets.Scripts
 
                 if (Time.time - this.yoloItems[i].TimeLastSeen <= Parameters.ObjectTimeOut) continue;
 
-                Destroy(yoloItems[i].TrackingMarker);
+                // Preserve the persistent marker — it should stay visible until replaced
+                if (yoloItems[i].TrackingMarker != persistentMarker)
+                    Destroy(yoloItems[i].TrackingMarker);
+                yoloItems[i].TrackingMarker = null;
                 this.yoloItems.RemoveAt(i);
             }
         }
@@ -105,21 +109,32 @@ namespace Assets.Scripts
                 .Where(item => item.IsInCameraView && item.TimesSeen >= Parameters.MinTimesSeen)
                 .ToList();
 
-            // Pick only the single most confident food item across all types
+            // Pick only the single most confident food item across all types, excluding suppressed classes
             DisplayedItem winner = visibleItems
-                .Where(item => item.YoloItem.MostLikelyClassFood != null)
+                .Where(item => item.YoloItem.MostLikelyClassFood != null && item.YoloItem.MostLikelyClassFood != "Pho mai")
                 .OrderByDescending(i => i.YoloItem.Confidence)
                 .FirstOrDefault();
 
-            // Show winner's label; destroy any stale markers from other items
+            if (winner != null)
+            {
+                this.ManageTrackingMarkerFood(winner);
+                yoloDebugOutput.ShowDebugInformationForItem(winner);
+
+                // If the winner produced a new marker, replace the persistent one
+                if (winner.TrackingMarker != null && winner.TrackingMarker != persistentMarker)
+                {
+                    if (persistentMarker != null)
+                        Destroy(persistentMarker);
+                    persistentMarker = winner.TrackingMarker;
+                }
+            }
+            // When there is no winner, persistentMarker stays visible at its last position
+
+            // Destroy markers of non-winner items, but never the persistent marker
             foreach (DisplayedItem item in this.yoloItems)
             {
-                if (item == winner)
-                {
-                    this.ManageTrackingMarkerFood(item);
-                    yoloDebugOutput.ShowDebugInformationForItem(item);
-                }
-                else if (item.TrackingMarker != null)
+                if (item == winner) continue;
+                if (item.TrackingMarker != null && item.TrackingMarker != persistentMarker)
                 {
                     Destroy(item.TrackingMarker);
                     item.TrackingMarker = null;
