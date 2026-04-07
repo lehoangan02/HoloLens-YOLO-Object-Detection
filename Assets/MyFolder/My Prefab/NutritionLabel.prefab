@@ -1408,7 +1408,7 @@ MonoBehaviour:
   canvasElementRoundedRectFat: {fileID: 1112161375280159420}
   canvasElementRoundedRectSaturates: {fileID: 4901400420169810358}
   canvasElementRoundedRectSugar: {fileID: 5502622924040736595}
-  canvasElementRoundedRectSalt: {fileID: 3405548722629710438}
+  canvasElementRoundedRectSalt: {fileID: 1159975956587676682}
   hitCollider: {fileID: 0}
   hitColliderPadding: {x: 0.03, y: 0.03, z: 0}
   hitColliderDepth: 0.04
