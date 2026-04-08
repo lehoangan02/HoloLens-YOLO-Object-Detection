@@ -198,9 +198,9 @@ namespace Assets.Scripts
 
         /// <summary>
         /// Returns display positions for each winner, nudging them apart along the camera's right
-        /// axis when either:
-        ///   - their label rects would overlap in viewport space, or
-        ///   - one is 0.6 m+ behind the other and close on screen (depth covering).
+        /// axis when their label rects would overlap in viewport space OR when one food is 0.6 m+
+        /// behind the other (depth covering — even if labels just barely clear each other, the
+        /// depth gap makes the scene confusing so we force extra separation).
         /// The nudge is split symmetrically: both labels move equal amounts in opposite directions.
         /// </summary>
         private static Vector3[] ComputeDisplayPositions(List<DisplayedItem> winners)
@@ -223,25 +223,29 @@ namespace Assets.Scripts
             float screenDist2D = Vector2.Distance(new Vector2(vA.x, vA.y), new Vector2(vB.x, vB.y));
             float depthDiff    = Mathf.Abs(vA.z - vB.z);
 
-            // Get the label's world-space half-width from the collider of whichever marker exists
+            // Get the label's world-space half-width from the collider of whichever marker exists.
+            // Use the average depth of both positions to get a representative viewport scale.
             float halfWidthWorld = GetLabelHalfWidth(winners[0].TrackingMarker);
             if (halfWidthWorld == 0f) halfWidthWorld = GetLabelHalfWidth(winners[1].TrackingMarker);
             if (halfWidthWorld == 0f) halfWidthWorld = 0.15f; // fallback until collider is ready
 
-            // Convert half-width to viewport units at posA's depth
+            Vector3 midPos = (posA + posB) * 0.5f;
+            Vector3 vMid   = cam.WorldToViewportPoint(midPos);
             float labelVpHalfWidth = Mathf.Abs(
-                cam.WorldToViewportPoint(posA + cam.transform.right * halfWidthWorld).x - vA.x);
+                cam.WorldToViewportPoint(midPos + cam.transform.right * halfWidthWorld).x - vMid.x);
 
-            // Two label widths + small margin = minimum centre-to-centre separation needed
+            // Two full label widths + small gap = minimum centre-to-centre separation needed
             float requiredSep = 2f * labelVpHalfWidth + 0.02f;
 
-            // Check both overlap cases
-            bool screenOverlap  = screenDist2D < requiredSep;
-            bool depthCovering  = depthDiff >= 0.6f && screenDist2D < requiredSep;
+            // Nudge if labels overlap on screen, OR if one food is 0.6 m+ behind the other
+            // (depth covering: the front label can obscure the back food even if rects barely clear).
+            bool needsNudge = screenDist2D < requiredSep || depthDiff >= 0.6f;
+            if (!needsNudge) return positions;
 
-            if (!screenOverlap && !depthCovering) return positions;
-
-            float deficit = requiredSep - screenDist2D;
+            // When depth covering forces a nudge despite labels already being screen-separated,
+            // use the full required separation as the target instead of the current distance.
+            float targetSep = requiredSep;
+            float deficit   = targetSep - screenDist2D;
             if (deficit <= 0f) return positions;
 
             // Determine push direction for B (A goes the opposite way); if centres coincide, push right
@@ -250,12 +254,12 @@ namespace Assets.Scripts
 
             float halfDeficit = deficit * 0.5f;
 
-            // Compute world-to-viewport-x scale at each position by sampling a small offset
+            // Compute viewport-x per world-metre at each position by sampling a small offset
             const float testWorld = 0.05f;
             float vpPerWorldA = (cam.WorldToViewportPoint(posA + cam.transform.right * testWorld).x - vA.x) / testWorld;
             float vpPerWorldB = (cam.WorldToViewportPoint(posB + cam.transform.right * testWorld).x - vB.x) / testWorld;
 
-            // Guard against degenerate cases (labels extremely far away)
+            // Guard against degenerate cases (labels extremely far away or behind cam)
             if (Mathf.Abs(vpPerWorldA) < 0.0001f || Mathf.Abs(vpPerWorldB) < 0.0001f)
                 return positions;
 
