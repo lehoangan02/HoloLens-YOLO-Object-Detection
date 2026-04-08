@@ -23,6 +23,7 @@ namespace Assets.Scripts
             "Bun dau (Vermicelli with tofu)",
             "Bun mam (Fermented fish noodle soup)",
             "Bun rieu (Crab noodle soup)",
+            "Bun cha ca (Fish cake noodle soup)",
         };
 
         [SerializeField]
