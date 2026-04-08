@@ -14,6 +14,17 @@ namespace Assets.Scripts
         private readonly List<GameObject> _persistentMarkers = new();
         private const int MaxLabels = 2;
 
+        // When Pho is already shown, these classes are suppressed as the second label —
+        // they co-occur with pho in real life and would mask the actual second food (banh mi).
+        private static readonly HashSet<string> PhoCoOccurrenceExclusions = new()
+        {
+            "Bun bo Hue (Hue beef noodle soup)",
+            "Bun cha (Grilled pork with vermicelli)",
+            "Bun dau (Vermicelli with tofu)",
+            "Bun mam (Fermented fish noodle soup)",
+            "Bun rieu (Crab noodle soup)",
+        };
+
         [SerializeField]
         private GameObject labelObject;
 
@@ -124,6 +135,19 @@ namespace Assets.Scripts
                 if (winners.Count >= MaxLabels) break;
                 if (winners.Any(w => w.YoloItem.MostLikelyClassFood == candidate.YoloItem.MostLikelyClassFood))
                     continue;
+                // Suppress bun-family classes whenever pho is involved (either slot)
+                bool phoAlreadyWon = winners.Any(w => w.YoloItem.MostLikelyClassFood == "Pho (Vietnamese noodle soup)");
+                bool candidateIsPho = candidate.YoloItem.MostLikelyClassFood == "Pho (Vietnamese noodle soup)";
+                bool bunFamilyAlreadyWon = winners.Any(w => PhoCoOccurrenceExclusions.Contains(w.YoloItem.MostLikelyClassFood));
+                if (phoAlreadyWon && PhoCoOccurrenceExclusions.Contains(candidate.YoloItem.MostLikelyClassFood))
+                    continue;
+                if (candidateIsPho && bunFamilyAlreadyWon)
+                {
+                    // Replace the bun-family slot with pho, then keep looking for banh mi
+                    int bunIdx = winners.FindIndex(w => PhoCoOccurrenceExclusions.Contains(w.YoloItem.MostLikelyClassFood));
+                    winners[bunIdx] = candidate;
+                    continue;
+                }
                 winners.Add(candidate);
             }
 
