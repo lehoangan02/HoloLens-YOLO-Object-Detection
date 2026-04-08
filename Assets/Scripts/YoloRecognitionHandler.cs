@@ -76,7 +76,13 @@ namespace Assets.Scripts
 
             foreach (DisplayedItem oldItem in oldItems)
             {
-                if (!oldItem.YoloItem.MostLikelyClass.Equals(item.MostLikelyClass)) continue;
+                // Food items from the Mac receiver always have MostLikelyClass = default(0),
+                // so match by food name string instead to avoid cross-class merging.
+                bool sameClass = !string.IsNullOrEmpty(item.MostLikelyClassFood)
+                    ? oldItem.YoloItem.MostLikelyClassFood == item.MostLikelyClassFood
+                    : oldItem.YoloItem.MostLikelyClass.Equals(item.MostLikelyClass);
+
+                if (!sameClass) continue;
 
                 float distance = Vector3.Distance(oldItem.PositionInSpace, positionInSpace);
                 if (distance > Parameters.MaxIdenticalObject || distance >= closestDist) continue;
